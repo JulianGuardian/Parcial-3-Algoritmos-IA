@@ -1,32 +1,46 @@
 schema: spec-driven
 
-# Project context (optional)
-# Add only constraints that should guide OpenSpec artifacts and workflows.
-# Include constraints an agent cannot infer by reading the code.
-# Keep general project documentation and discoverable codebase facts out.
-# Example:
-#   context: |
-#     Designs and tasks must cover Windows, macOS, and Linux
-#     Write all artifacts in Spanish
+# Project context
+context: |
+  Context
+  A compact team at Nubara Airlines (Product Manager, Product Designer,
+  Engineering Team Lead, and Software Engineer) is building a feature to help
+  passengers whose flight has been modified. The product must help the
+  passenger understand what happened and what their next step is, without
+  giving out unverified information and without executing high-impact actions
+  without the corresponding controls.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
+  Business goal
+  Reduce passenger uncertainty and avoidable contacts to the call center while
+  maintaining accuracy, security, and traceability.
+
+  Scope of first version
+  A first version should allow a passenger to:
+  1. Look up the context of their trip.
+  2. Understand whether there was a relevant modification and what it implies.
+  3. Receive an actionable explanation or recommendation.
+  4. Be referred to a person, or start a controlled action, when appropriate.
+
+  Constraints
+  - Operational data may be outdated or contradictory across sources.
+  - An incorrect recommendation can lead to cost, a complaint, or a policy
+    violation.
+  - Changing a booking or issuing compensation are high-impact actions.
+  - Personal data must be protected and least privilege applied.
+  - The first version must be operable by a small team.
+  - Latency, cost per interaction, and model dependency must be considered.
+  - There is no single correct solution.
+
+# Per-artifact rules
 # Example:
 #   rules:
 #     proposal:
-#       - Keep proposals under 500 words
-#       - Always state what is out of scope
 #     tasks:
-#       - Break tasks into chunks of max 2 hours
 
 # Per-operation guidance (optional)
-# Add advisory guidance for how apply and archive work should be conducted.
-# This is separate from artifact rules above.
 # Example:
 #   operations:
 #     apply:
 #       guidance:
-#         - Keep test summaries concise
 #     archive:
 #       guidance:
-#         - Summarize the archive outcome before finishing
