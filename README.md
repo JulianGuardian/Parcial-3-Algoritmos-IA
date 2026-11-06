@@ -1,126 +1,128 @@
 # Parcial 3 – Algoritmos - IA
 
-Desarrollo del tercer parcial del curso de Algoritmos - Inteligencia Artificial.
+Third midterm project for the Algorithms - Artificial Intelligence course.
+
+Repository: <https://github.com/JulianGuardian/Parcial-3-Algoritmos-IA>
 
 ## Backend (FastAPI)
 
-Servicio base en `backend/` (Python 3.12+, FastAPI). Endpoints:
+Base service in `backend/` (Python 3.12+, FastAPI). Endpoints:
 
-| Ruta | Descripción |
-|------|-------------|
+| Route | Description |
+|-------|-------------|
 | `GET /health` | Liveness: `{"status": "ok"}` |
-| `GET /docs` | Documentación OpenAPI interactiva |
-| `/api/v1/...` | Prefijo para los endpoints de negocio (aún vacío) |
+| `GET /docs` | Interactive OpenAPI documentation |
+| `/api/v1/...` | Prefix for business endpoints (still empty) |
 
-Cada respuesta incluye el header `X-Request-ID` (se reutiliza el enviado por el cliente si es válido) y cada petición se registra como una línea JSON en stdout.
+Every response includes the `X-Request-ID` header (the client's value is reused if it is valid) and every request is logged as one JSON line to stdout.
 
-## Cómo ejecutar el proyecto
+## How to run the project
 
-### Requisitos
+### Requirements
 
-| Herramienta | Versión | Necesaria para |
-|-------------|---------|----------------|
-| Git | cualquiera | clonar el repo |
-| Docker Desktop (o Docker Engine + Compose v2) | Compose ≥ 2.24 | ejecución con Docker |
-| Python | 3.12 o superior | ejecución sin Docker y pruebas |
+| Tool | Version | Needed for |
+|------|---------|------------|
+| Git | any | cloning the repo |
+| Docker Desktop (or Docker Engine + Compose v2) | Compose ≥ 2.24 | running with Docker |
+| Python | 3.12 or higher | running without Docker and tests |
 
-Con Docker no necesitas instalar Python.
+You do not need to install Python if you run with Docker.
 
-### 1. Clonar el repositorio
+### 1. Clone the repository
 
 ```bash
-git clone <url-del-repositorio>
+git clone https://github.com/JulianGuardian/Parcial-3-Algoritmos-IA.git
 cd Parcial-3-Algoritmos-IA
 ```
 
-### 2. Configurar variables de entorno (opcional)
+### 2. Configure environment variables (optional)
 
-El servicio arranca con valores por defecto. Para cambiarlos:
+The service starts with default values. To change them:
 
 ```bash
 cp .env.example .env         # Windows (PowerShell): Copy-Item .env.example .env
 ```
 
-Edita `.env` según la tabla de [Configuración](#configuración). El `.env` real nunca se versiona.
+Edit `.env` using the [Configuration](#configuration) table. The real `.env` is never committed.
 
-### 3a. Ejecutar con Docker (recomendado)
+### 3a. Run with Docker (recommended)
 
-Abre Docker Desktop y espera a que el engine esté corriendo. Luego, desde la raíz del repo:
+Open Docker Desktop and wait until the engine is running. Then, from the repo root:
 
 ```bash
 docker compose up --build
 ```
 
-- Backend en <http://localhost:8000> y documentación en <http://localhost:8000/docs>.
-- El código de `backend/app` está montado: al guardar un archivo el servicio recarga solo.
-- Para correrlo en segundo plano: `docker compose up --build -d` y ver logs con `docker compose logs -f backend`.
-- Para detenerlo: `Ctrl+C` (o `docker compose down` si usaste `-d`).
+- Backend at <http://localhost:8000> and documentation at <http://localhost:8000/docs>.
+- The `backend/app` code is mounted: saving a file reloads the service automatically.
+- To run it in the background: `docker compose up --build -d`, and follow the logs with `docker compose logs -f backend`.
+- To stop it: `Ctrl+C` (or `docker compose down` if you used `-d`).
 
-### 3b. Ejecutar sin Docker
+### 3b. Run without Docker
 
-Desde la carpeta `backend/`:
+From the `backend/` folder:
 
 ```bash
 cd backend
 python -m venv .venv
 ```
 
-Activa el entorno virtual:
+Activate the virtual environment:
 
 ```bash
 .venv\Scripts\activate        # Windows (cmd/PowerShell)
 source .venv/bin/activate     # Linux / macOS / Git Bash: source .venv/Scripts/activate
 ```
 
-Instala dependencias y arranca:
+Install dependencies and start the server:
 
 ```bash
 pip install -e ".[dev]"
 uvicorn app.main:app --reload
 ```
 
-El servicio queda en <http://127.0.0.1:8000>. Para detenerlo: `Ctrl+C`. Si tienes un `.env` en la raíz, cópialo o exporta las variables en `backend/`, porque sin Docker se lee `.env` desde el directorio donde corres `uvicorn`.
+The service is available at <http://127.0.0.1:8000>. To stop it: `Ctrl+C`. If you have a `.env` in the repo root, copy it to `backend/` or export the variables, because without Docker `.env` is read from the directory where you run `uvicorn`.
 
-### 4. Verificar que funciona
+### 4. Check that it works
 
 ```bash
 curl http://localhost:8000/health
 # {"status":"ok"}
 ```
 
-O abre <http://localhost:8000/docs> en el navegador. Con la respuesta incluyes el header `X-Request-ID`:
+Or open <http://localhost:8000/docs> in your browser. To see the `X-Request-ID` header in the response:
 
 ```bash
-curl -i -H "X-Request-ID: mi-prueba-1" http://localhost:8000/health
+curl -i -H "X-Request-ID: my-test-1" http://localhost:8000/health
 ```
 
-### Pruebas
+### Tests
 
-Con el entorno virtual activo, desde `backend/`:
+With the virtual environment active, from `backend/`:
 
 ```bash
 pytest
 ```
 
-### Configuración
+### Configuration
 
-Variables de entorno (ver `.env.example`):
+Environment variables (see `.env.example`):
 
-| Variable | Valores | Default |
-|----------|---------|---------|
-| `APP_NAME` | texto | `nubara-backend` |
+| Variable | Values | Default |
+|----------|--------|---------|
+| `APP_NAME` | text | `nubara-backend` |
 | `ENVIRONMENT` | `local`, `staging`, `production` | `local` |
 | `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` | `INFO` |
-| `API_V1_PREFIX` | ruta | `/api/v1` |
+| `API_V1_PREFIX` | path | `/api/v1` |
 
-Un valor inválido hace que el servicio falle al iniciar indicando la variable.
+An invalid value makes the service fail at startup and name the offending variable.
 
-### Problemas frecuentes
+### Troubleshooting
 
-| Síntoma | Causa y solución |
-|---------|------------------|
-| `failed to connect to the docker API` | Docker Desktop no está corriendo. Ábrelo y espera a "Engine running". |
-| `port is already allocated` / puerto 8000 ocupado | Otro proceso usa el 8000. Ciérralo o cambia el mapeo en `docker-compose.yml` (por ejemplo `"8001:8000"`). |
-| `ValidationError ... log_level` al iniciar | Valor inválido en `.env`. Usa uno de los valores de la tabla de configuración. |
-| `env_file ... required` no soportado | Compose antiguo. Actualiza Docker Desktop (Compose ≥ 2.24). |
-| La recarga no detecta cambios en Windows | Se usa un recargador por polling; espera 1–2 segundos tras guardar. |
+| Symptom | Cause and fix |
+|---------|---------------|
+| `failed to connect to the docker API` | Docker Desktop is not running. Open it and wait for "Engine running". |
+| `port is already allocated` / port 8000 in use | Another process is using port 8000. Stop it or change the mapping in `docker-compose.yml` (for example `"8001:8000"`). |
+| `ValidationError ... log_level` at startup | Invalid value in `.env`. Use one of the values in the configuration table. |
+| `env_file ... required` not supported | Old Compose version. Update Docker Desktop (Compose ≥ 2.24). |
+| Reload does not detect changes on Windows | A polling reloader is used; wait 1–2 seconds after saving. |
