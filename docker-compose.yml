@@ -2,7 +2,7 @@ services:
   backend:
     build:
       context: ./backend
-    image: nubara-backend:dev
+    image: Parcial-P3-Algoritmos-IA:dev
     ports:
       - "8000:8000"
     env_file:

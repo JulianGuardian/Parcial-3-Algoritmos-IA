@@ -14,7 +14,7 @@ def make(monkeypatch, **env):
 
 def test_defaults(monkeypatch):
     s = make(monkeypatch)
-    assert s.app_name == "nubara-backend"
+    assert s.app_name == "Parcial-P3-Algoritmos-IA"
     assert s.environment == "local"
     assert s.log_level == "INFO"
     assert s.api_v1_prefix == "/api/v1"

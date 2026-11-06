@@ -108,7 +108,7 @@ Variables de entorno (ver `.env.example`):
 
 | Variable | Valores | Default |
 |----------|---------|---------|
-| `APP_NAME` | texto | `nubara-backend` |
+| `APP_NAME` | texto | `Parcial-P3-Algoritmos-IA` |
 | `ENVIRONMENT` | `local`, `staging`, `production` | `local` |
 | `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` | `INFO` |
 | `API_V1_PREFIX` | ruta | `/api/v1` |
