@@ -1,0 +1,23 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    image: nubara-backend:dev
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      # Source is mounted so edits are picked up without rebuilding the image.
+      - ./backend/app:/app/app
+    # Overrides the image CMD to add reload. Plain uvicorn uses a polling
+    # reloader, which also works on Windows bind mounts.
+    command:
+      - uvicorn
+      - app.main:app
+      - --host=0.0.0.0
+      - --port=8000
+      - --no-access-log
+      - --reload
+      - --reload-dir=/app/app

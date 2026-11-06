@@ -1,0 +1,3 @@
+# Keep container build files LF on every platform (CRLF breaks the Dockerfile heredoc).
+Dockerfile text eol=lf
+*.sh text eol=lf
