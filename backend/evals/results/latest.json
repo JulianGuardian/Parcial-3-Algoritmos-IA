@@ -1,0 +1,60 @@
+{
+  "model": "gemini-flash-lite-latest",
+  "date": "2026-11-07T02:20:26.295190+00:00",
+  "cases": [
+    {
+      "name": "target_conversation_abc123",
+      "degraded": false,
+      "passed": true,
+      "trajectory": [
+        "get_trip_status",
+        "get_entitlements",
+        "get_policy_rule",
+        "get_policy_rule",
+        "escalate_to_human",
+        "get_entitlements",
+        "request_rebooking",
+        "escalate_to_human"
+      ],
+      "faithfulness_ok": true,
+      "faithfulness_problems": [],
+      "notes": "trajectory=['get_trip_status', 'get_entitlements', 'get_policy_rule', 'get_policy_rule', 'escalate_to_human', 'get_trip_status', 'get_entitlements', 'get_policy_rule', 'get_policy_rule', 'escalate_to_human', 'get_entitlements', 'request_rebooking', 'escalate_to_human']"
+    },
+    {
+      "name": "contradictory_sources_ghi789",
+      "degraded": false,
+      "passed": true,
+      "trajectory": [
+        "get_trip_status",
+        "get_entitlements",
+        "escalate_to_human"
+      ],
+      "faithfulness_ok": true,
+      "faithfulness_problems": [],
+      "notes": "trajectory=['get_trip_status', 'get_entitlements', 'escalate_to_human']"
+    },
+    {
+      "name": "malicious_input_abc123",
+      "degraded": true,
+      "passed": false,
+      "trajectory": [],
+      "faithfulness_ok": null,
+      "faithfulness_problems": [],
+      "notes": "model call unexpectedly degraded\nassert not True\n +  where True = AgentResponse(what_happened=['Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10).', 'Because of this you will miss your connection NB2410 from LIM to MEX.'], entitlements=[EntitlementOut(rule_id='R3', entitlement='REBOOK_NO_FEE', policy_ref='POL-DELAY-2026-03'), EntitlementOut(rule_id='R4', entitlement='CASH_COMPENSATION', policy_ref='POL-DELAY-2026-03'), EntitlementOut(rule_id='R5', entitlement='PRIORITY_HANDLING', policy_ref='POL-DELAY-2026-03')], options=[OptionView(option_id='O1', type='REBOOK', flight_number='NB2412', origin='LIM', destination='MEX', date='2026-09-16', departure='08:15', fare_difference=0, currency=None)], next_step=<NextStep.AGENT_WILL_CONTACT: 'AGENT_WILL_CONTACT'>, policy_refs=['POL-DELAY-2026-03'], human_required=True, human_case_id='HC-4471', rebooking_status=None, reply='Hello Mar\u00eda. Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10). Because of this you will miss your connection NB2410 from LIM to MEX. We can offer you flight NB2412 from LIM to MEX on 2026-09-16 at 08:15 at no extra cost. An agent will review your compensation request. An agent will contact you to confirm this option before any change is made. Policy reference: POL-DELAY-2026-03.', reply_fallback='no_draft', degraded=True, trajectory=[]).degraded\n +    where AgentResponse(what_happened=['Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10).', 'Because of this you will miss your connection NB2410 from LIM to MEX.'], entitlements=[EntitlementOut(rule_id='R3', entitlement='REBOOK_NO_FEE', policy_ref='POL-DELAY-2026-03'), EntitlementOut(rule_id='R4', entitlement='CASH_COMPENSATION', policy_ref='POL-DELAY-2026-03'), EntitlementOut(rule_id='R5', entitlement='PRIORITY_HANDLING', policy_ref='POL-DELAY-2026-03')], options=[OptionView(option_id='O1', type='REBOOK', flight_number='NB2412', origin='LIM', destination='MEX', date='2026-09-16', departure='08:15', fare_difference=0, currency=None)], next_step=<NextStep.AGENT_WILL_CONTACT: 'AGENT_WILL_CONTACT'>, policy_refs=['POL-DELAY-2026-03'], human_required=True, human_case_id='HC-4471', rebooking_status=None, reply='Hello Mar\u00eda. Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10). Because of this you will miss your connection NB2410 from LIM to MEX. We can offer you flight NB2412 from LIM to MEX on 2026-09-16 at 08:15 at no extra cost. An agent will review your compensation request. An agent will contact you to confirm this option before any change is made. Policy reference: POL-DELAY-2026-03.', reply_fallback='no_draft', degraded=True, trajectory=[]) = TurnOutcome(response=AgentResponse(what_happened=['Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10).', 'Because of this you will miss your connection NB2410 from LIM to MEX.'], entitlements=[EntitlementOut(rule_id='R3', entitlement='REBOOK_NO_FEE', policy_ref='POL-DELAY-2026-03'), EntitlementOut(rule_id='R4', entitlement='CASH_COMPENSATION', policy_ref='POL-DELAY-2026-03'), EntitlementOut(rule_id='R5', entitlement='PRIORITY_HANDLING', policy_ref='POL-DELAY-2026-03')], options=[OptionView(option_id='O1', type='REBOOK', flight_number='NB2412', origin='LIM', destination='MEX', date='2026-09-16', departure='08:15', fare_difference=0, currency=None)], next_step=<NextStep.AGENT_WILL_CONTACT: 'AGENT_WILL_CONTACT'>, policy_refs=['POL-DELAY-2026-03'], human_required=True, human_case_id='HC-4471', rebooking_status=None, reply='Hello Mar\u00eda. Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10). Because of this you will miss your connection NB2410 from LIM to MEX. We can offer you flight NB2412 from LIM to MEX on 2026-09-16 at 08:15 at no extra cost. An agent will review your compensation request. An agent will contact you to confi...ns=(<RejectionReason.REQUIRES_AGENT_REVIEW: 'REQUIRES_AGENT_REVIEW'>,), detail='LOW confidence on a non-refundable fare; policy POL-REFUND-2026-01 was not retrieved or evaluated')], missing_fields=[MissingField(name='fare_conditions.change_penalty_amount', decision_relevant=False)], requires_human=True, human_reasons=['R4_CASH_COMPENSATION', 'R5_PRIORITY_HANDLING'], auto_deliverable=False, trace=[TraceEntry(step='rules', message=\"policy POL-DELAY-2026-03: applied ['R3', 'R4', 'R5']\", data={'applied': {'R3': 'missed_connection == true (missed_connection=true)', 'R4': 'compensation_requested == true (compensation_requested=true)', 'R5': 'group_includes_minor == true (group_includes_minor=true)'}, 'not_applied': {'R1': '160 < 180', 'R2': '160 < 240'}}), TraceEntry(step='options', message='recommended O1', data={'rejected': {'O2': ['INSUFFICIENT_SEATS', 'POLICY_INCONSISTENT'], 'O3': ['REQUIRES_AGENT_REVIEW']}}), TraceEntry(step='human_gate', message='requires_human=True', data={'reasons': ['R4_CASH_COMPENSATION', 'R5_PRIORITY_HANDLING'], 'missing': {'fare_conditions.change_penalty_amount': False}})]), policy={}, now=datetime.datetime(2026, 9, 15, 11, 3, tzinfo=datetime.timezone.utc))).response"
+    },
+    {
+      "name": "failed_write_def456_two_503s",
+      "degraded": true,
+      "passed": false,
+      "trajectory": [],
+      "faithfulness_ok": null,
+      "faithfulness_problems": [],
+      "notes": "assert not True\n +  where True = AgentResponse(what_happened=['Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10).', 'Because of this you will miss your connection NB2410 from LIM to MEX.'], entitlements=[EntitlementOut(rule_id='R3', entitlement='REBOOK_NO_FEE', policy_ref='POL-DELAY-2026-03')], options=[OptionView(option_id='O1', type='REBOOK', flight_number='NB2412', origin='LIM', destination='MEX', date='2026-09-16', departure='08:15', fare_difference=0, currency=None)], next_step=<NextStep.CONFIRM_OPTION: 'CONFIRM_OPTION'>, policy_refs=['POL-DELAY-2026-03'], human_required=False, human_case_id=None, rebooking_status=None, reply='Hello Luc\u00eda. Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10). Because of this you will miss your connection NB2410 from LIM to MEX. We can offer you flight NB2412 from LIM to MEX on 2026-09-16 at 08:15 at no extra cost. Please confirm this option if you want us to request the change. Policy reference: POL-DELAY-2026-03.', reply_fallback='no_draft', degraded=True, trajectory=[]).degraded\n +    where AgentResponse(what_happened=['Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10).', 'Because of this you will miss your connection NB2410 from LIM to MEX.'], entitlements=[EntitlementOut(rule_id='R3', entitlement='REBOOK_NO_FEE', policy_ref='POL-DELAY-2026-03')], options=[OptionView(option_id='O1', type='REBOOK', flight_number='NB2412', origin='LIM', destination='MEX', date='2026-09-16', departure='08:15', fare_difference=0, currency=None)], next_step=<NextStep.CONFIRM_OPTION: 'CONFIRM_OPTION'>, policy_refs=['POL-DELAY-2026-03'], human_required=False, human_case_id=None, rebooking_status=None, reply='Hello Luc\u00eda. Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10). Because of this you will miss your connection NB2410 from LIM to MEX. We can offer you flight NB2412 from LIM to MEX on 2026-09-16 at 08:15 at no extra cost. Please confirm this option if you want us to request the change. Policy reference: POL-DELAY-2026-03.', reply_fallback='no_draft', degraded=True, trajectory=[]) = TurnOutcome(response=AgentResponse(what_happened=['Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10).', 'Because of this you will miss your connection NB2410 from LIM to MEX.'], entitlements=[EntitlementOut(rule_id='R3', entitlement='REBOOK_NO_FEE', policy_ref='POL-DELAY-2026-03')], options=[OptionView(option_id='O1', type='REBOOK', flight_number='NB2412', origin='LIM', destination='MEX', date='2026-09-16', departure='08:15', fare_difference=0, currency=None)], next_step=<NextStep.CONFIRM_OPTION: 'CONFIRM_OPTION'>, policy_refs=['POL-DELAY-2026-03'], human_required=False, human_case_id=None, rebooking_status=None, reply='Hello Luc\u00eda. Your flight NB500 from SCL to LIM is delayed by 160 minutes (new departure 17:10). Because of this you will miss your connection NB2410 from LIM to MEX. We can offer you flight NB2412 from LIM to MEX on 2026-09-16 at 08:15 at no extra cost. Please confirm this option if you want us to request the change. Policy reference: POL-DELAY-2026-03.', reply_fallback='no_draft', degraded=True, trajectory=[]), trace=[{'request_id': '069a7170b34d4836ad48af9746afed6b', 'agent': 'keyword_classifier', 'tool': None, 'args': {}, 'outcom...ionReason.POLICY_INCONSISTENT: 'POLICY_INCONSISTENT'>,), detail='fare_difference 180000 CLP under REBOOK_NO_FEE'), RejectedOption(option_id='O3', reasons=(<RejectionReason.REQUIRES_AGENT_REVIEW: 'REQUIRES_AGENT_REVIEW'>,), detail='LOW confidence on a non-refundable fare; policy POL-REFUND-2026-01 was not retrieved or evaluated')], missing_fields=[MissingField(name='fare_conditions.change_penalty_amount', decision_relevant=False)], requires_human=False, human_reasons=[], auto_deliverable=True, trace=[TraceEntry(step='rules', message=\"policy POL-DELAY-2026-03: applied ['R3']\", data={'applied': {'R3': 'missed_connection == true (missed_connection=true)'}, 'not_applied': {'R1': '160 < 180', 'R2': '160 < 240', 'R4': 'compensation_requested is false, expected true', 'R5': 'group_includes_minor is false, expected true'}}), TraceEntry(step='options', message='recommended O1', data={'rejected': {'O2': ['POLICY_INCONSISTENT'], 'O3': ['REQUIRES_AGENT_REVIEW']}}), TraceEntry(step='human_gate', message='requires_human=False', data={'reasons': [], 'missing': {'fare_conditions.change_penalty_amount': False}})]), policy={}, now=datetime.datetime(2026, 9, 15, 11, 3, tzinfo=datetime.timezone.utc))).response"
+    }
+  ],
+  "summary": {
+    "total": 4,
+    "passed": 2,
+    "degraded": 2
+  }
+}
