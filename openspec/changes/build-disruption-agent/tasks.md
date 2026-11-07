@@ -29,8 +29,8 @@
 ## 5. Evaluation and observability
 
 - [x] 5.1 Implement the faithfulness check (every entitlement maps to an applied rule and a returned `policy_ref`; every flight in the reply is in `options`), and verify that it fails on a response listing an unbacked `MEAL_VOUCHER`
-- [ ] 5.2 Add the four real-model evaluation cases under `backend/evals/` (`pytest -m llm`: target conversation, contradictory sources GHI789, malicious input, failed write DEF456 with two 503), each asserting the trajectory, the `AgentResponse` and faithfulness, and verify that they run and write `backend/evals/results/latest.json` with the model id and date (not overwritten on quota errors)
-- [ ] 5.3 Save one full-run trace of the target conversation to `docs/trace-abc123.jsonl`, and verify that the PII scan test passes on the saved file
+- [x] 5.2 Add the four real-model evaluation cases under `backend/evals/` (`pytest -m llm`: target conversation, contradictory sources GHI789, malicious input, failed write DEF456 with two 503), each asserting the trajectory, the `AgentResponse` and faithfulness, and verify that they run and write `backend/evals/results/latest.json` with the model id and date (not overwritten on quota errors)
+- [x] 5.3 Save one full-run trace of the target conversation to `docs/trace-abc123.jsonl`, and verify that the PII scan test passes on the saved file
 - [ ] 5.4 Write the evaluation report section (latest results or the labeled saved run, and at least one failure the checks revealed or a stated limit of what they prove), and verify that it cites the results file
 
 ## 6. Deliverables

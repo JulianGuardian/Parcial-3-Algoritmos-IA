@@ -28,3 +28,6 @@ include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "llm: real-model evaluation case (change build-disruption-agent, task 5.2); needs INTENT_MODEL_API_KEY, run explicitly with `pytest evals -m llm`",
+]

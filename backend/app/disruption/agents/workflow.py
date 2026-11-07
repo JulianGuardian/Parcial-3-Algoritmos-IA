@@ -45,7 +45,7 @@ from app.disruption.agents.contracts import (
     STATE_TOOL_LOG,
     AgentResponse,
 )
-from app.disruption.agents.disruption_tools import Evaluation, ToolDeps, build_tools
+from app.disruption.agents.disruption_tools import Evaluation, ToolDeps, build_tools, evaluate
 from app.disruption.agents.guardrails import enforce_escalation, make_before_tool_callback
 from app.disruption.agents.response import build_response
 from app.disruption.contracts import ResolveRequest
@@ -106,10 +106,19 @@ def build_disruption_agent(deps: ToolDeps, model: str | Any, timeout_seconds: fl
     )
 
 
-def build_disruption_companion(deps: ToolDeps, model: str | Any) -> SequentialAgent:
+def build_disruption_companion(
+    deps: ToolDeps,
+    model: str | Any,
+    *,
+    classifier_timeout: float = 3.0,
+    agent_timeout: float = 8.0,
+) -> SequentialAgent:
     return SequentialAgent(
         name=COMPANION_NAME,
-        sub_agents=[build_intent_classifier(model), build_disruption_agent(deps, model)],
+        sub_agents=[
+            build_intent_classifier(model, classifier_timeout),
+            build_disruption_agent(deps, model, agent_timeout),
+        ],
     )
 
 
@@ -117,6 +126,7 @@ def build_disruption_companion(deps: ToolDeps, model: str | Any) -> SequentialAg
 class TurnOutcome:
     response: AgentResponse
     trace: list[dict[str, Any]] = field(default_factory=list)
+    evaluation: Evaluation | None = None
 
 
 def _redact_value(value: Any) -> Any:
@@ -182,6 +192,8 @@ def _run_live(
     state_delta: dict[str, Any],
     request_id: str,
     model: str | Any | None = None,
+    classifier_timeout: float = 3.0,
+    agent_timeout: float = 8.0,
 ) -> TurnOutcome:
     if model is None:
         if not settings.intent_model_api_key:
@@ -189,7 +201,9 @@ def _run_live(
         os.environ.setdefault("GOOGLE_API_KEY", settings.intent_model_api_key)
         model = settings.intent_model
 
-    companion = build_disruption_companion(deps, model)
+    companion = build_disruption_companion(
+        deps, model, classifier_timeout=classifier_timeout, agent_timeout=agent_timeout
+    )
     runner = Runner(app_name=app_name, agent=companion, session_service=session_service)
 
     events = list(
@@ -255,7 +269,8 @@ def _run_live(
         )
 
     reply_draft = _reply_text(events, DISRUPTION_AGENT_NAME)
-    response = build_response(state, deps, reply_draft=reply_draft, degraded=False)
+    evaluation = evaluate(state, deps)
+    response = build_response(state, deps, reply_draft=reply_draft, degraded=False, evaluation=evaluation)
 
     trace.append(
         _trace_line(
@@ -267,7 +282,7 @@ def _run_live(
             latency_ms=0.0,
         )
     )
-    return TurnOutcome(response=response, trace=trace)
+    return TurnOutcome(response=response, trace=trace, evaluation=evaluation)
 
 
 def _run_degraded(
@@ -333,7 +348,7 @@ def _run_degraded(
             for t in resolution.trace
         ],
     ]
-    return TurnOutcome(response=response, trace=trace)
+    return TurnOutcome(response=response, trace=trace, evaluation=evaluation)
 
 
 def _parse_now(value: str) -> datetime:
@@ -355,12 +370,17 @@ def run_turn(
     now: str | None = None,
     request_id: str | None = None,
     model: str | Any | None = None,
+    classifier_timeout: float = 3.0,
+    agent_timeout: float = 8.0,
 ) -> TurnOutcome:
     """Run one turn of `disruption_companion`, degrading safely on failure.
 
     `model` is a test injection point: pass a scripted `BaseLlm` fake to
     avoid a real model call. Production callers omit it and the model from
-    `settings.intent_model` is used.
+    `settings.intent_model` is used. `classifier_timeout`/`agent_timeout`
+    default to the production values (design D12/D13); the evaluation
+    harness (task 5.2) raises them, since a free-tier model under load can
+    take far longer than a passenger-facing turn ever should.
     """
     request_id = request_id or uuid.uuid4().hex
     redacted = redact_pii(message)
@@ -383,6 +403,8 @@ def run_turn(
             state_delta=state_delta,
             request_id=request_id,
             model=model,
+            classifier_timeout=classifier_timeout,
+            agent_timeout=agent_timeout,
         )
     except Exception as exc:  # noqa: BLE001 - any model failure degrades safely (task 3.3)
         return _run_degraded(
