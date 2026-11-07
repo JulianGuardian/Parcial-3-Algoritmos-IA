@@ -22,9 +22,9 @@
 
 ## 4. Conversation API
 
-- [ ] 4.1 Implement `POST /api/v1/conversations` (in-memory ADK session holding the booking id; 201, 404) and `POST /api/v1/conversations/{id}/messages` (`message` 1–500 characters, optional `confirm_option_id` and `now`; 404 `CONVERSATION_NOT_FOUND`, 422, 503 with request id), and verify `TestClient` tests with a fake model
-- [ ] 4.2 Verify with `TestClient` and a fake model the two-turn ABC123 conversation (turn 2 with `confirm_option_id=O1` → a human case, no rebooking), and that free-text "book O1" without `confirm_option_id` creates nothing
-- [ ] 4.3 Document `GOOGLE_API_KEY` and the free-tier model in `.env.example` (placeholders only), and verify that `docker compose up --build` serves both new endpoints and still starts without a key, in degraded mode
+- [x] 4.1 Implement `POST /api/v1/conversations` (in-memory ADK session holding the booking id; 201, 404) and `POST /api/v1/conversations/{id}/messages` (`message` 1–500 characters, optional `confirm_option_id` and `now`; 404 `CONVERSATION_NOT_FOUND`, 422, 503 with request id), and verify `TestClient` tests with a fake model
+- [x] 4.2 Verify with `TestClient` and a fake model the two-turn ABC123 conversation (turn 2 with `confirm_option_id=O1` → a human case, no rebooking), and that free-text "book O1" without `confirm_option_id` creates nothing
+- [x] 4.3 Document `GOOGLE_API_KEY` and the free-tier model in `.env.example` (placeholders only), and verify that `docker compose up --build` serves both new endpoints and still starts without a key, in degraded mode
 
 ## 5. Evaluation and observability
 
