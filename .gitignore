@@ -18,3 +18,6 @@ dist/
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# IA
+.claude
