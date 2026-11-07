@@ -57,6 +57,7 @@ Two agents, not one: the agent that reads raw passenger text has no tools, so a 
 
 - **Free-tier availability.** During this session, `gemini-3.8-flash` and `gemini-3-flash-preview` returned `503`/`429` under real load; `gemini-flash-lite-latest` was reachable. `INTENT_MODEL` is a setting precisely so the deployed model can be swapped without a code change, and degradation ensures the service stays correct either way.
 - **A confirmed rebooking can still be blocked.** The callback re-validates the option against a fresh `decide()` call at request time; an option that expired or whose party no longer fits is refused with a typed reason, not silently retried.
+- **The frontend is a pure UI mock.** `frontend/` renders the chat and the decision card against example data; it makes no API call yet. Wiring it to `/api/v1/conversations` is a later change.
 - Next steps: a persistent session store (today: in-memory only, lost on restart), more policy scenarios beyond `DELAY`, and a judge-free automated faithfulness score across more paraphrases of the target question.
 
 ## Validation
@@ -64,14 +65,28 @@ Two agents, not one: the agent that reads raw passenger text has no tools, so a 
 - **Unit/offline tests:** `pytest` → 190 passed, 1 skipped (an optional real-model intent-classifier test, skipped without a key). No test here calls a real model.
 - **Real-model evaluations** (`pytest evals -m llm`, needs `INTENT_MODEL_API_KEY`): four cases - the target conversation, contradictory sources (`GHI789`), a prompt-injection attempt, and a failed write with two `503`s (`DEF456`) - each asserting the tool trajectory, the `AgentResponse`, and faithfulness (every entitlement/`policy_ref` in the response is backed by a tool result; every flight mentioned is one of the options or the passenger's own segment). Latest run (`backend/evals/results/latest.json`, model `gemini-flash-lite-latest`, 2026-11-07): **2 of 4 cases passed live** (`target_conversation_abc123`, `contradictory_sources_ghi789`) with a real, verified tool trajectory and faithfulness held in both; **2 cases failed because the model call degraded** (free-tier `503`/`429` at the time), which the harness reports rather than silently passing or overwriting the file with an all-degraded run. This is the stated limit of what these checks prove: they confirm the guardrails and the deterministic fallback hold under both live and failed model calls, but a given run's live-model coverage is capped by free-tier availability at that moment.
 - **Saved trace:** `docs/trace-abc123.jsonl`, a full two-turn live run (classifier -> tools -> guardrail decisions -> reply validation for both turns), scanned for personal data by `tests/disruption/test_saved_trace.py`. It shows the callback correctly blocking `request_rebooking` with `HUMAN_REQUIRED` even on the confirmed turn, since R5 always needs a human for `ABC123`.
+- **Frontend:** `pnpm run test` (Vitest) and `pnpm run build` (type-check + production build) in `frontend/`; see `frontend/README.md`.
+
+## Frontend (React + Vite)
+
+The passenger chat lives in `frontend/` (React 19, TypeScript, Vite, MUI, pnpm). It shows the conversation and, under each assistant answer, a card that explains the disruption: what happened to each flight, the passenger's benefits, the proposed option at no extra cost and whether an agent will follow up. The card shows only what a passenger may see.
+
+The screen is a pure UI for now (see Risks above): it makes no API call and shows example data shaped like the response of `POST /api/v1/disruptions/{booking_id}/resolve`. The interface text is in English and the theme follows the system's light or dark preference. More details in [`frontend/README.md`](frontend/README.md).
 
 ## How to run
 
 ### Requirements
 
-Git; Docker Desktop (Compose ≥ 2.24) or Python 3.12+ to run without Docker.
+| Tool | Version | Needed for |
+|------|---------|------------|
+| Git | any | cloning the repo |
+| Docker Desktop (or Docker Engine + Compose v2) | Compose ≥ 2.24 | running with Docker |
+| Python | 3.12 or higher | running the backend without Docker and its tests |
+| Node.js + pnpm | 24.22.1 or newer in 24.x, pnpm 10.33.0 | running the frontend without Docker and its tests |
 
-### Local (no Docker)
+You do not need to install Python or Node.js if you run with Docker.
+
+### Backend, local (no Docker)
 
 ```bash
 cd backend
@@ -89,7 +104,20 @@ Service at <http://127.0.0.1:8000>, docs at `/docs`. Copy `backend/.env.example`
 docker compose up --build
 ```
 
-Serves `GET /health`, `POST /api/v1/disruptions/{booking_id}/resolve`, `POST /api/v1/conversations` and `POST /api/v1/conversations/{id}/messages` at <http://localhost:8000>, with no key required (degraded mode). To use the real model in Docker, put `INTENT_CLASSIFIER=adk` and `INTENT_MODEL_API_KEY=...` in a `.env` file at the repo root.
+This starts two services:
+
+| Service | URL | Notes |
+|---------|-----|-------|
+| `backend` | <http://localhost:8000> (docs at <http://localhost:8000/docs>) | FastAPI; `backend/app` is mounted, so saving a file reloads it. Serves `GET /health`, `POST /api/v1/disruptions/{booking_id}/resolve`, `POST /api/v1/conversations` and `POST /api/v1/conversations/{id}/messages`, with no key required (degraded mode) |
+| `frontend` | <http://localhost:5173> | Vite dev server; `frontend/` is mounted, so saving a file updates the page without a rebuild |
+
+- The first start is slower: it downloads the Node image and installs the frontend dependencies inside the container.
+- The container uses its own `node_modules` (a Docker volume), never the one on your machine. If you change dependencies in `frontend/package.json`, restart the service (`docker compose restart frontend`) and it installs what the lockfile says.
+- To start only one service: `docker compose up --build backend` or `docker compose up --build frontend`.
+- To run it in the background: `docker compose up --build -d`, and follow the logs with `docker compose logs -f frontend` (or `backend`).
+- To stop it: `Ctrl+C` (or `docker compose down` if you used `-d`). To also reset the frontend dependencies, use `docker compose down -v`.
+- On Linux the container user (uid 1000) must be able to write in `frontend/`; if your user has a different uid, set `user` for the service in a local compose override.
+- To use the real model in the backend, put `INTENT_CLASSIFIER=adk` and `INTENT_MODEL_API_KEY=...` in a `.env` file at the repo root.
 
 Try the conversational agent:
 
@@ -111,3 +139,56 @@ python -m evals.save_trace                    # regenerates docs/trace-abc123.js
 ```
 
 `EVAL_INTENT_MODEL` is optional; it only overrides which model the evaluations target, in case the app's default is temporarily unavailable on the free tier.
+
+### Frontend, local (no Docker)
+
+Needs Node.js 24.22.1 or newer in the 24.x line and pnpm (see `frontend/.nvmrc`):
+
+```bash
+cd frontend
+pnpm install
+pnpm run dev        # http://localhost:5173
+pnpm run test       # unit and component tests
+pnpm run build      # type-check and production build
+```
+
+### Check that it works
+
+```bash
+curl http://localhost:8000/health
+# {"status":"ok"}
+```
+
+Or open <http://localhost:8000/docs> in your browser, and <http://localhost:5173> for the frontend. To see the `X-Request-ID` header in the response:
+
+```bash
+curl -i -H "X-Request-ID: my-test-1" http://localhost:8000/health
+```
+
+### Configuration
+
+Environment variables (see `.env.example`):
+
+| Variable | Values | Default |
+|----------|--------|---------|
+| `APP_NAME` | text | `nubara-backend` |
+| `ENVIRONMENT` | `local`, `staging`, `production` | `local` |
+| `LOG_LEVEL` | `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL` | `INFO` |
+| `API_V1_PREFIX` | path | `/api/v1` |
+| `INTENT_CLASSIFIER` | `keyword`, `adk` | `keyword` |
+| `INTENT_MODEL` | a Gemini model id | `gemini-3.8-flash` |
+| `INTENT_MODEL_API_KEY` / `GOOGLE_API_KEY` | a free-tier key from AI Studio | unset (degraded mode) |
+
+An invalid value makes the service fail at startup and name the offending variable.
+
+### Troubleshooting
+
+| Symptom | Cause and fix |
+|---------|---------------|
+| `failed to connect to the docker API` | Docker Desktop is not running. Open it and wait for "Engine running". |
+| `port is already allocated` / port 8000 in use | Another process is using port 8000. Stop it or change the mapping in `docker-compose.yml` (for example `"8001:8000"`). |
+| Port 5173 in use (the frontend exits with `Port 5173 is already in use`) | Another Vite or tool uses 5173. Stop it or change the mapping in `docker-compose.yml`. |
+| `ERR_PNPM_...` in `docker compose logs frontend`, or a dependency that is missing | The `frontend_node_modules` volume is out of date or was interrupted. Run `docker compose down -v` and start again. |
+| `ValidationError ... log_level` at startup | Invalid value in `.env`. Use one of the values in the configuration table. |
+| `env_file ... required` not supported | Old Compose version. Update Docker Desktop (Compose ≥ 2.24). |
+| Reload does not detect changes on Windows | Both services use a polling reloader because file events do not cross the Windows mount; wait 1–2 seconds after saving. |
