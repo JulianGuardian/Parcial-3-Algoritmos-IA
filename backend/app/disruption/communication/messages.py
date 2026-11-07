@@ -59,7 +59,7 @@ def build_message(state: TripState, decision: Decision, actions: ActionResult) -
     if state.assessment_status in (AssessmentStatus.CONFLICTING, AssessmentStatus.UNVERIFIED):
         lines.append("We are still confirming the latest status of your trip.")
     else:
-        lines.extend(_what_happened(state))
+        lines.extend(describe_what_happened(state))
 
     entitlements = {r.entitlement for r in decision.applied_rules}
     option = decision.recommended_option
@@ -81,6 +81,8 @@ def build_message(state: TripState, decision: Decision, actions: ActionResult) -
             lines.append("An agent will contact you with your options.")
     elif actions.rebooking.status in (RebookingStatus.PENDING, RebookingStatus.ALREADY_EXISTS):
         lines.append("We have requested this change; you will receive a confirmation once it is completed.")
+    elif option is not None and option.type == "REBOOK":
+        lines.append("Please confirm this option if you want us to request the change.")
 
     if decision.policy_ref:
         lines.append(f"Policy reference: {decision.policy_ref}.")
@@ -126,7 +128,7 @@ def _greeting(state: TripState) -> str:
     return f"Hello {lead.first_name}." if lead and lead.first_name else "Hello."
 
 
-def _what_happened(state: TripState) -> list[str]:
+def describe_what_happened(state: TripState) -> list[str]:
     lines: list[str] = []
     for segment in state.segments:
         if segment.status is SegmentStatus.DELAYED and segment.delay_minutes:

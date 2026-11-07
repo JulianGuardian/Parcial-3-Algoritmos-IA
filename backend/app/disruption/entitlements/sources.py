@@ -6,7 +6,12 @@ from app.disruption.contracts import BookingNotFound, ToolUnavailable
 from app.disruption.fixtures import load_fixture
 
 _POLICIES = {"DELAY": "get_policy_rules_DELAY"}
-_OPTIONS_BY_BOOKING = {"ABC123": "get_eligible_options_ABC123"}
+# DEF456 and GHI789 fly the same LIM-MEX leg, so they share the candidate options.
+_OPTIONS_BY_BOOKING = {
+    "ABC123": "get_eligible_options_ABC123",
+    "DEF456": "get_eligible_options_ABC123",
+    "GHI789": "get_eligible_options_ABC123",
+}
 
 
 def get_policy_rules(scenario: str) -> dict[str, Any]:

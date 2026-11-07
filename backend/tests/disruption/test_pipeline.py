@@ -2,13 +2,19 @@ from datetime import datetime, timezone
 
 import pytest
 
+import app.disruption.pipeline as pipeline_module
+from app.core.config import Settings
 from app.disruption.actions.service import RebookingStatus
 from app.disruption.actions.write_tools import HUMAN_CASE, NOTIFY, REBOOKING, MockWriteTools
+from app.disruption.agents.answer_agent import AnswerAgentResult
 from app.disruption.communication.messages import DeliveryStatus
-from app.disruption.contracts import BookingNotFound, Decision, ResolveRequest
+from app.disruption.contracts import BookingNotFound, Decision, ResolveRequest, TraceEntry
 from app.disruption.pipeline import resolve_disruption
 
 NOW = datetime(2026, 9, 15, 11, 3, 0, tzinfo=timezone.utc)
+# Forces the keyword classifier so these tests never attempt a real model
+# call, regardless of what a local .env configures.
+KEYWORD_SETTINGS = Settings(_env_file=None, intent_classifier="keyword")
 
 
 def test_abc123_end_to_end_returns_a_decision():
@@ -46,3 +52,32 @@ def test_expired_options_are_never_recommended():
 
     assert resolution.decision.recommended_option is None
     assert resolution.decision.requires_human is True
+
+
+def test_request_without_a_question_never_calls_the_answer_agent_and_sends_the_template(monkeypatch):
+    def _explode(*args, **kwargs):
+        raise AssertionError("answer_question must not be called without a question")
+
+    monkeypatch.setattr(pipeline_module, "answer_question", _explode)
+
+    resolution = resolve_disruption(ResolveRequest("ABC123", now=NOW), settings=KEYWORD_SETTINGS)
+
+    assert "answer_agent" not in {t.step for t in resolution.trace}
+    assert resolution.message.text  # the deterministic template was sent
+
+
+def test_request_with_a_question_runs_the_answer_agent_through_the_validator(monkeypatch):
+    fake_result = AnswerAgentResult(
+        message="A validated, agent-drafted reply.",
+        fallback_used=False,
+        trace=TraceEntry("answer_agent", "fake", {"fallback_used": False}),
+    )
+    monkeypatch.setattr(pipeline_module, "answer_question", lambda *a, **k: fake_result)
+
+    resolution = resolve_disruption(
+        ResolveRequest("ABC123", now=NOW, question="What are my options?"),
+        settings=KEYWORD_SETTINGS,
+    )
+
+    assert "answer_agent" in {t.step for t in resolution.trace}
+    assert resolution.message.text == "A validated, agent-drafted reply."
