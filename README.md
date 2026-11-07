@@ -20,7 +20,7 @@ Every response includes the `X-Request-ID` header (the client's value is reused 
 
 The backend is the base of a Nubara Airlines feature that helps passengers whose flight was modified: it explains what happened and what to do next, without giving unverified information and without executing high-impact actions (rebooking, compensation) without human approval.
 
-The work is specified with [OpenSpec](https://github.com/Fission-AI/OpenSpec) in `openspec/changes/resolve-passenger-disruption/` (proposal, specs, design and tasks). The domain lives in `backend/app/disruption/` as plain Python with no FastAPI imports, so each layer is tested without HTTP.
+The work is specified with [OpenSpec](https://github.com/Fission-AI/OpenSpec) in `openspec/changes/archive/2026-11-06-resolve-passenger-disruption/` (proposal, design and tasks) and the main specs in `openspec/specs/`. The change was archived with its tasks 4 to 7 still pending; move it back to `openspec/changes/` to keep implementing them. The domain lives in `backend/app/disruption/` as plain Python with no FastAPI imports, so each layer is tested without HTTP.
 
 | Layer | Package | Status | What it does |
 |-------|---------|--------|--------------|
