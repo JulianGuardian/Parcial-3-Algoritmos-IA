@@ -31,7 +31,6 @@ In the product, AI appears only at the two ends of the flow (design D11–D13). 
 - Every spec scenario is backed by a test (`pytest`: 120 passing as of PR #5). Tests also assert that no personal data appears in responses, messages or human-case evidence.
 - `openspec validate --all --strict` passes on every change.
 - Every diff is reviewed manually before commit, and every PR is reviewed by another team member.
-- _TODO: confirm that the fixtures were checked line by line against the exam photos._
 
 ## Decisions we made personally
 
