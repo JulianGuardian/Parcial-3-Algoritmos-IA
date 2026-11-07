@@ -1,0 +1,14 @@
+{
+  "201": {
+    "request_id": "RBK-88231",
+    "status": "PENDING_CONFIRMATION",
+    "expires_at": "2026-09-15T11:12:00Z"
+  },
+  "409": {
+    "error": "DUPLICATE_REQUEST",
+    "request_id": "RBK-88231"
+  },
+  "503": {
+    "error": "UPSTREAM_TIMEOUT"
+  }
+}
