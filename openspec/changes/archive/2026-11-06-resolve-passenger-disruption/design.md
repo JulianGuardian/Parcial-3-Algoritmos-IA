@@ -55,24 +55,27 @@ The stack is Python 3.12, FastAPI, pytest and Docker, as already set up.
 - `ResolveRequest`: `booking_id`, `now`, `question`, `compensation_requested`, `wants_same_day` (the last two are set by the request or by intake).
 - `TripState`:
   - `booking_id`, `party_size`, `has_minor`;
-  - per segment: `status` (including `UNVERIFIED`), `delay_minutes`, `estimated_arrival`, `missed_connection`;
-  - `assessment_status` (`OK` | `CONFLICTING` | `UNVERIFIED` | `NO_RELEVANT_CHANGE`), `relevant`;
-  - `discarded_events`, `missing_fields`, `trace`.
+  - `passengers`: `PassengerView` (`passenger_id`, `first_name`, `type`, `age`, `masked_email`, `masked_phone`) and `fare_conditions`;
+  - per segment: `status` (`SCHEDULED` | `ON_TIME` | `DELAYED` | `CANCELLED` | `CONFLICTING` | `UNVERIFIED`), `delay_minutes`, scheduled and estimated times, `missed_connection`;
+  - `assessment_status` (`OK` | `CONFLICTING` | `UNVERIFIED` | `NO_RELEVANT_CHANGE`), `relevant`, `relevance_reasons`, `informational_changes`;
+  - `discarded_events` (each with a reason), `missing_fields`, `trace`.
 - `Decision`:
-  - `applied_rules`, `not_applied_rules` (each with its reason), `policy_ref`;
-  - `recommended_option`, `rejected_options` (each with its reason);
-  - `requires_human`, `human_reasons`, `auto_deliverable`, `trace`.
+  - `applied_rules`, `not_applied_rules` (each a `RuleResult` with `rule_id`, entitlement and reason), `policy_ref`;
+  - `recommended_option`, `rejected_options` (each with `reasons`: every failing check, the first being the primary one);
+  - `missing_fields` (each with `decision_relevant`), `requires_human`, `human_reasons`, `auto_deliverable`, `trace`.
+- Errors shared by the layers: `BookingNotFound` (maps to 404) and `ToolUnavailable` (maps to 503).
 
-Personal data is stripped in `assessment`. Downstream layers never receive `document_id`, the email or the phone number.
+Personal data is stripped in `assessment`. Downstream layers never receive `document_id`, surnames, or the raw email and phone number; they get first names and masked contacts.
 *Alternative:* a single function (rejected because it mixes concerns and is harder to test).
 
 ### D3. Source conflicts are resolved by priority, recency and escalation
-`OPS_CORE` > `AIRPORT_FEED` > `LEGACY_MIRROR`; degraded sources are excluded and recency breaks ties within a source. An incompatible state between two trusted sources leads to `CONFLICTING` and a human.
+`OPS_CORE` > `AIRPORT_FEED` > `LEGACY_MIRROR`; degraded sources are excluded and recency breaks ties within a source. The trusted pair is `OPS_CORE` and `AIRPORT_FEED`: when both assert incompatible states for a segment the result is `CONFLICTING` and a human, regardless of which is more recent. `LEGACY_MIRROR` never creates a conflict; it only counts when no higher-priority source asserts a status. A segment with no usable asserting event keeps its booked schedule, and is `UNVERIFIED` only when events existed but were all stale.
 Freshness: an event older than a configurable maximum age (default 2 h, measured from `recorded_at` to the response's `_meta.retrieved_at`) is stale. Stale events never assert a status. A segment whose status depends only on stale events is `UNVERIFIED` and requires a human.
 *Alternatives:* latest event wins (rejected because a stale mirror could override ops); always escalate (rejected because it defeats the goal of reducing contact-center load).
 
-### D4. Relevance means "changes what the passenger must do or grants an entitlement"
-*Alternative:* every event is relevant (rejected because it creates noise and unnecessary notifications).
+### D4. Relevance means "changes what the passenger must do or may grant an entitlement"
+Any delay, a missed connection or a cancellation is relevant; a gate change alone is informational and evaluates no entitlement. Assessment does not know policy thresholds, so every delay is relevant and the policy decides afterwards whether it carries an entitlement.
+*Alternatives:* every event is relevant (rejected because a lone gate change would create noise and unnecessary notifications); relevant only above a delay threshold (rejected because it would duplicate the policy's R1 threshold inside assessment).
 
 ### D5. Missed connection is derived, with a configurable minimum connection time
 Estimated arrival = scheduled arrival + delay. The minimum connection time defaults to 60 minutes and is configurable. All times are treated as airport-local, as given, and the flight duration is assumed unchanged.
@@ -84,7 +87,7 @@ Estimated arrival = scheduled arrival + delay. The minimum connection time defau
 3. Consistency with the entitlement.
 4. Confidence and evaluated policy.
 
-The recommendation is the remaining no-cost option with the highest confidence, then the earliest departure. Each rejected option keeps its reason code (`EXPIRED`, `INSUFFICIENT_SEATS`, `POLICY_INCONSISTENT`, `REQUIRES_AGENT_REVIEW`).
+The recommendation is the remaining no-cost option with the highest confidence, then the earliest departure. Each rejected option keeps every failing reason code (`EXPIRED`, `INSUFFICIENT_SEATS`, `POLICY_INCONSISTENT`, `REQUIRES_AGENT_REVIEW`) in this order, the first being the primary one; a past TTL rejects all options with `EXPIRED` only. Expired options are re-fetched once; if the re-fetch is still expired every option is rejected.
 *Alternative:* trust `get_eligible_options` (rejected because the statement says it only returns candidates, not a final decision).
 
 ### D7. The human gate blocks execution, not the explanation
@@ -92,7 +95,7 @@ When `requires_human` is true, the passenger still gets a validated explanation 
 *Alternative:* block all communication (rejected because it leaves the passenger uncertain, which is the very problem being solved).
 
 ### D8. Partial data blocks only when it is decision-relevant
-Each rule and option declares the fields it needs; a decision escalates only if one of those fields is missing.
+Each entitlement declares the fields it needs (a table in the entitlements layer, empty for `REBOOK_NO_FEE`); a decision escalates only if one of those fields is missing. Missing fields are always listed with a `decision_relevant` flag. A rule input that cannot be determined, such as the country of an unknown airport, is always decision-relevant.
 
 ### D9. Write safety
 - The idempotency key is a hash of `booking_id`, `option_id` and `policy_ref`.
@@ -179,6 +182,12 @@ Example: *"My flight was delayed. Will I be compensated? Can I still fly today w
 
 *Alternatives:* a separate HTTP service for the facade (rejected because it adds latency and one more thing to operate, with no isolation gain inside one process); letting the agent call write tools such as `create_human_case` (rejected because escalation is a deterministic decision, see D7).
 
+### D14. Rule conditions are parsed, never evaluated as code
+- **Parsing.** Policy conditions such as `delay_minutes >= 240 AND international` are split into terms and checked against a fixed set of variables (`delay_minutes`, `missed_connection`, `group_includes_minor`, `compensation_requested`, `international`). An unreadable term or an unknown variable is a policy-tool failure (`ToolUnavailable`, 503) instead of a silently ignored rule. Terms are evaluated left to right and stop at the first one that fails, so the recorded reason is that term (for example `160 < 180`).
+- **Inputs.** `delay_minutes` and `international` describe the most delayed verified segment; `missed_connection` and `group_includes_minor` come from the `TripState`; `compensation_requested` comes from the request.
+- **International.** A fixed airport-to-country table decides it. An airport that is not in the table makes the flag unknown, which is listed as decision-relevant missing data (`airport_country:<code>`) and escalates.
+*Alternative:* `eval` of the condition string (rejected because the policy text comes from a tool and must never run as code).
+
 ### Step classification
 
 | Step | Classification | Reason | Risk | Control / Fallback |
@@ -198,6 +207,7 @@ Example: *"My flight was delayed. Will I be compensated? Can I still fly today w
 
 - [The source priority order is assumed, not given by the statement] → documented as an assumption and easy to change.
 - [A fixed 60-minute MCT may be wrong for some airports] → configurable and listed in the README limitations.
+- [The airport-to-country table is small and hard-coded] → an unknown airport is reported as missing data and escalates instead of being guessed; extend the table or read it from reference data later.
 - [Escalating every booking with a minor increases contact-center load] → accepted for v1 because the policy explicitly requires approval.
 - [Template messages read less naturally] → acceptable for v1, because accuracy matters more than tone.
 - [Mocks may not reflect real latency or failures] → tests inject the 409, 503 and 422 responses explicitly.
@@ -210,3 +220,5 @@ Example: *"My flight was delayed. Will I be compensated? Can I still fly today w
 ## Open Questions
 
 - Who confirms a `PENDING_CONFIRMATION` rebooking (the passenger or an agent) once the human case is approved? This does not change v1, because v1 never creates the rebooking automatically for ABC123.
+- When the passenger is entitled to a rebooking but every option is rejected (for example all options are past their TTL after the re-fetch), the decision has no recommendation and, unless another gate condition applies, `requires_human` stays false. Should it escalate with an extra reason such as `NO_VALID_OPTION`? The communication and actions layers must cover this case in the meantime.
+- The maximum event age (default 2 h) and the minimum connection time (default 60 min) are parameters of the assessment function. They move to `Settings` and `.env.example` when the settings task (4.5) is done.
