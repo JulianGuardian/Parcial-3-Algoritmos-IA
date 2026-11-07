@@ -43,3 +43,13 @@ def test_draft_claiming_compensation_approved_is_rejected():
     result = validate_answer_draft(draft, _decision())
     assert result.accepted is False
     assert result.reason == "overclaims_outcome"
+
+
+def test_own_segment_flights_are_allowed_when_declared():
+    from app.disruption.agents.validator import validate_answer_draft as validate
+
+    decision = _decision()
+    draft = "Your flight NB500 is delayed and you miss NB2410. We offer NB2412. An agent will confirm. POL-DELAY-2026-03"
+
+    assert validate(draft, decision).reason == "mentions_other_option"
+    assert validate(draft, decision, own_flights={"NB500", "NB2410"}).accepted
