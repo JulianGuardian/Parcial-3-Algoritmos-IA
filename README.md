@@ -16,6 +16,31 @@ Base service in `backend/` (Python 3.12+, FastAPI). Endpoints:
 
 Every response includes the `X-Request-ID` header (the client's value is reused if it is valid) and every request is logged as one JSON line to stdout.
 
+## Passenger disruption domain
+
+The backend is the base of a Nubara Airlines feature that helps passengers whose flight was modified: it explains what happened and what to do next, without giving unverified information and without executing high-impact actions (rebooking, compensation) without human approval.
+
+The work is specified with [OpenSpec](https://github.com/Fission-AI/OpenSpec) in `openspec/changes/archive/2026-11-06-resolve-passenger-disruption/` (proposal, design and tasks) and the main specs in `openspec/specs/`. The change was archived with its tasks 4 to 7 still pending; move it back to `openspec/changes/` to keep implementing them. The domain lives in `backend/app/disruption/` as plain Python with no FastAPI imports, so each layer is tested without HTTP.
+
+| Layer | Package | Status | What it does |
+|-------|---------|--------|--------------|
+| Contracts | `contracts.py` | done | Dataclasses shared by all layers: `ResolveRequest`, `TripState`, `Decision`, `RejectedOption`, `TraceEntry` |
+| Assessment | `assessment/` | done | Strips personal data, reconciles sources (priority, degraded, stale, conflicts), detects missed connections and relevance |
+| Entitlements | `entitlements/` | done | Evaluates policy rules R1–R5, filters options with reason codes, recommends one and decides when a human must approve |
+| Intake | `intake/` | pending | Classifies a free-text question into intents |
+| Actions | `actions/` | pending | Controlled writes: rebooking request, human case, idempotency |
+| Communication | `communication/` | pending | Validated passenger messages |
+| Answer agent | `agents/` | pending | Question-specific answers over safe read-only tools |
+| HTTP endpoint | `app/api/v1/` | pending | `POST /api/v1/disruptions/{booking_id}/resolve` |
+
+The assessment and entitlements layers run today against mock tools that return the exam's sample responses (`backend/app/disruption/fixtures/`, booking `ABC123`). They are not exposed over HTTP yet; the layer tests are the way to exercise them.
+
+Key decisions (details in `design.md`):
+- Operational sources are ranked `OPS_CORE` > `AIRPORT_FEED` > `LEGACY_MIRROR`; degraded sources and events older than 2 hours are never trusted, and a disagreement between `OPS_CORE` and `AIRPORT_FEED` is `CONFLICTING` and goes to a human.
+- A missed connection is derived from the delay and a 60-minute minimum connection time, so a delay below the policy thresholds can still create an entitlement.
+- Options past their TTL, without seats for the whole party, contradicting the applied entitlement, or with low confidence are never recommended.
+- A human must approve whenever a rule requires it (R4, R5), the assessment is `CONFLICTING` or `UNVERIFIED`, or data the decision needs is missing.
+
 ## How to run the project
 
 ### Requirements
@@ -101,8 +126,11 @@ curl -i -H "X-Request-ID: my-test-1" http://localhost:8000/health
 With the virtual environment active, from `backend/`:
 
 ```bash
-pytest
+pytest                      # everything
+pytest tests/disruption     # only the passenger disruption domain
 ```
+
+The domain tests need no network, Docker or API key: they use the sample fixtures.
 
 ### Configuration
 

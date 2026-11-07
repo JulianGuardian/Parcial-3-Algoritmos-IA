@@ -138,16 +138,23 @@ def answer_question(
     api_key: str | None,
     timeout_seconds: float = 5.0,
     agent_runner: AnswerAgentRunner | None = None,
+    fallback_message: str | None = None,
 ) -> AnswerAgentResult:
     """Draft a passenger answer and validate it, falling back to the
     template on any timeout, error, or validation failure.
 
     `agent_runner` is an injection point for tests: pass a fake with a
     `.draft(question, recorder)` method to avoid real model calls.
+    `fallback_message` lets the caller supply the real, deterministic
+    template text (design D13's "template answer") built for this decision
+    (e.g. from `communication.messages.build_message`); when omitted, a
+    minimal built-in template is used instead (kept for callers/tests that
+    do not build a full `PassengerMessage`).
     """
     facade = DisruptionToolsFacade(trip, decision)
     recorder = ToolCallRecorder(facade)
     runner = agent_runner or AnswerAgentRunner(model=model, api_key=api_key, timeout_seconds=timeout_seconds)
+    template_text = fallback_message if fallback_message is not None else _template_answer(decision)
 
     fallback_used = False
     fallback_reason: str | None = None
@@ -162,11 +169,11 @@ def answer_question(
         else:
             fallback_used = True
             fallback_reason = validator_result.reason
-            message = _template_answer(decision)
+            message = template_text
     except Exception as exc:  # noqa: BLE001 - any agent failure degrades to the template
         fallback_used = True
         fallback_reason = type(exc).__name__
-        message = _template_answer(decision)
+        message = template_text
 
     trace = TraceEntry(
         step="answer_agent",

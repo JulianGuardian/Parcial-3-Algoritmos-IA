@@ -1,7 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.disruptions import router as disruptions_router
+from app.api.v1 import disruptions
 
-# Business endpoints (trip lookup, modifications, handoff) will be added here.
 router = APIRouter()
-router.include_router(disruptions_router)
+router.include_router(disruptions.router)

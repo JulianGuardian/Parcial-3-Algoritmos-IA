@@ -7,12 +7,13 @@ Determines what the passenger is entitled to by evaluating the current versioned
 ## ADDED Requirements
 
 ### Requirement: Current policy version only
-The system SHALL evaluate only the policy version returned as current (for example `POL-DELAY-2026-03`) and SHALL never apply rules from `superseded_versions`. Every entitlement SHALL reference the `policy_ref` and `rule_id` that produced it.
+The system SHALL evaluate only the policy version returned as current (for example `POL-DELAY-2026-03`) and SHALL never apply rules from `superseded_versions`. The decision SHALL carry that `policy_ref`, and every rule result SHALL carry the `rule_id` that produced it.
 
 #### Scenario: Superseded policy ignored
 - **GIVEN** the policy response has version `POL-DELAY-2026-03` and superseded version `POL-DELAY-2025-11`
 - **WHEN** entitlements are evaluated
-- **THEN** every entitlement references `POL-DELAY-2026-03`
+- **THEN** the decision's `policy_ref` is `POL-DELAY-2026-03`
+- **AND** no rule of `POL-DELAY-2025-11` is evaluated
 
 ### Requirement: Deterministic rule evaluation
 The system SHALL evaluate rule conditions deterministically against the assessed trip and SHALL list each rule as applied or not applied, with the reason.
@@ -24,6 +25,20 @@ The system SHALL evaluate rule conditions deterministically against the assessed
 - **AND** R1 is not applied because 160 < 180
 - **AND** R2 is not applied because 160 < 240
 - **AND** R4 is not applied because no compensation was requested
+
+### Requirement: International flag from airport country
+The system SHALL treat a segment as international when its origin and destination airports belong to different countries, using a fixed airport-to-country table. An airport missing from the table SHALL make the flag unknown and be recorded as decision-relevant missing data.
+
+#### Scenario: Known airports
+- **GIVEN** S1 flies SCL to LIM and is delayed 300 minutes
+- **WHEN** entitlements are evaluated
+- **THEN** the segment is international and R2 (`MEAL_VOUCHER`) applies
+
+#### Scenario: Unknown airport
+- **GIVEN** S1 departs from an airport that is not in the table and is delayed 300 minutes
+- **WHEN** entitlements are evaluated
+- **THEN** R2 is not applied and `airport_country:<code>` is listed as decision-relevant missing data
+- **AND** `requires_human` is true with reason `MISSING_DECISION_DATA`
 
 ### Requirement: Expired options rejected
 The system SHALL reject candidate options whose `retrieved_at + ttl_seconds` is earlier than the evaluation time, and SHALL re-fetch options instead of using expired ones.
@@ -56,6 +71,15 @@ The system SHALL NOT auto-offer options with `LOW` confidence, or options whose 
 - **GIVEN** option O3 is a `REFUND` with confidence `LOW`, policy `POL-REFUND-2026-01` was not evaluated, and the fare is non-refundable
 - **WHEN** options are filtered
 - **THEN** O3 is not recommended and is marked `REQUIRES_AGENT_REVIEW`
+
+### Requirement: Rejection reasons are complete
+The system SHALL record every failing check for a rejected option, in the order TTL, seats, policy consistency, then confidence or evaluated policy. The first failing check SHALL be the primary reason.
+
+#### Scenario: Option failing two checks
+- **GIVEN** option O2 has 1 seat for 2 passengers and `fare_difference` 180000 CLP under `REBOOK_NO_FEE`
+- **WHEN** options are filtered
+- **THEN** O2 is rejected with reasons `INSUFFICIENT_SEATS` and `POLICY_INCONSISTENT`
+- **AND** the primary reason is `INSUFFICIENT_SEATS`
 
 ### Requirement: Recommended option
 The system SHALL recommend the valid option that satisfies the entitlement with no cost to the passenger, preferring `HIGH` confidence and then the earliest departure.
