@@ -39,8 +39,8 @@ def _mentions_other_flight(draft: str, recommended_flight: str | None) -> bool:
 
 
 def validate_answer_draft(draft: str, decision: Decision) -> ValidationResult:
-    recommended = decision.recommended_option or {}
-    recommended_flight = recommended.get("flight_number")
+    recommended = decision.recommended_option
+    recommended_flight = recommended.flight_number if recommended is not None else None
 
     if _mentions_other_flight(draft, recommended_flight):
         return ValidationResult(False, "mentions_other_option")

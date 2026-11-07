@@ -51,7 +51,8 @@ def classify_question(
         result = keyword.classify(redacted)
         trace = TraceEntry(
             step="intent_classifier",
-            detail={
+            message=f"{keyword.name}: {[i.value for i in result.intents]}",
+            data={
                 "framework": "keyword",
                 "agent": keyword.name,
                 "model": None,
@@ -96,7 +97,8 @@ def classify_question(
 
     trace = TraceEntry(
         step="intent_classifier",
-        detail={
+        message=f"{'keyword' if fallback_used else adk.name}: {[i.value for i in result.intents]}",
+        data={
             "framework": "google-adk" if not fallback_used else "keyword",
             "agent": adk.name if not fallback_used else keyword.name,
             "model": model_name if not fallback_used else None,

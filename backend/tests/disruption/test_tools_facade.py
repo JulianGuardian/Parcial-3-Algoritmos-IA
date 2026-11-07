@@ -1,13 +1,25 @@
 import inspect
+from datetime import datetime, timezone
 
 from app.disruption.agents.tools import DisruptionToolsFacade
-from app.disruption.assessment.mock import assess_trip
-from app.disruption.entitlements.mock import evaluate_entitlements
+from app.disruption.assessment.service import assess_trip
+from app.disruption.assessment.sources import get_operational_events, get_trip_context
+from app.disruption.contracts import ResolveRequest
+from app.disruption.entitlements.service import decide
+from app.disruption.entitlements.sources import get_eligible_options, get_policy_rules
+
+NOW = datetime(2026, 9, 15, 11, 3, 0, tzinfo=timezone.utc)
 
 
 def _abc123_facade() -> DisruptionToolsFacade:
-    trip = assess_trip("ABC123")
-    decision = evaluate_entitlements(trip)
+    trip = assess_trip(get_trip_context("ABC123"), get_operational_events(["S1", "S2"]))
+    decision = decide(
+        trip,
+        policy=get_policy_rules("DELAY"),
+        options_response=get_eligible_options({"booking_id": trip.booking_id}),
+        request=ResolveRequest(trip.booking_id),
+        now=NOW,
+    )
     return DisruptionToolsFacade(trip, decision)
 
 

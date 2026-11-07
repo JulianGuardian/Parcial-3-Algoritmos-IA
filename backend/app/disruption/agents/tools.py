@@ -31,9 +31,9 @@ class DisruptionToolsFacade:
                 {
                     "segment_id": s.segment_id,
                     "flight_number": s.flight_number,
-                    "status": s.status,
+                    "status": s.status.value,
                     "delay_minutes": s.delay_minutes,
-                    "estimated_arrival": s.estimated_arrival,
+                    "estimated_arrival": s.estimated_arrival.isoformat() if s.estimated_arrival else None,
                     "missed_connection": s.missed_connection,
                 }
                 for s in self._trip.segments
@@ -47,10 +47,10 @@ class DisruptionToolsFacade:
         recommended = None
         if option is not None:
             recommended = {
-                "option_id": option.get("option_id"),
-                "flight_number": option.get("flight_number"),
-                "date": option.get("date"),
-                "departure": option.get("departure"),
+                "option_id": option.option_id,
+                "flight_number": option.flight_number,
+                "date": option.date,
+                "departure": option.departure,
             }
         return {
             "applied_rules": [r.rule_id for r in self._decision.applied_rules],

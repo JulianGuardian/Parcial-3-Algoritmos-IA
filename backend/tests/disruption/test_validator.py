@@ -1,14 +1,14 @@
-from app.disruption.contracts import AppliedRule, Decision
+from app.disruption.contracts import Decision, Option, RuleResult
 from app.disruption.agents.validator import validate_answer_draft
 
 
 def _decision(requires_human=True) -> Decision:
     return Decision(
         booking_id="ABC123",
-        applied_rules=[AppliedRule(rule_id="R3", entitlement="REBOOK_NO_FEE")],
+        applied_rules=[RuleResult("R3", "REBOOK_NO_FEE", True, "missed_connection is true")],
         not_applied_rules=[],
         policy_ref="POL-DELAY-2026-03",
-        recommended_option={"option_id": "O1", "flight_number": "NB2412", "date": "2026-09-16"},
+        recommended_option=Option("O1", "REBOOK", flight_number="NB2412", date="2026-09-16"),
         rejected_options=[],
         requires_human=requires_human,
         human_reasons=["R5_PRIORITY_HANDLING"] if requires_human else [],

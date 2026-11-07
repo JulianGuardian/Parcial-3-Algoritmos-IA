@@ -42,7 +42,7 @@ def test_timeout_falls_back_to_keyword_with_fallback_used_true(monkeypatch):
     )
 
     assert result is not None
-    assert result.trace.detail["fallback_used"] is True
+    assert result.trace.data["fallback_used"] is True
     assert Intent.TRIP_STATUS in result.intent_result.intents
 
 
@@ -56,8 +56,8 @@ def test_confidence_below_threshold_falls_back(monkeypatch):
         adk_api_key="key",
     )
 
-    assert result.trace.detail["fallback_used"] is True
-    assert result.trace.detail["fallback_reason"] == "low_confidence"
+    assert result.trace.data["fallback_used"] is True
+    assert result.trace.data["fallback_reason"] == "low_confidence"
 
 
 def test_prompt_injection_only_yields_compensation_and_still_needs_human(monkeypatch):

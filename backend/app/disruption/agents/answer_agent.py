@@ -38,8 +38,8 @@ _INSTRUCTION = (
 
 
 def _template_answer(decision: Decision) -> str:
-    option = decision.recommended_option or {}
-    flight = option.get("flight_number")
+    option = decision.recommended_option
+    flight = option.flight_number if option is not None else None
     policy_ref = decision.policy_ref or "the applicable policy"
     lines = [f"We found a change affecting your trip, evaluated under {policy_ref}."]
     if flight:
@@ -170,7 +170,8 @@ def answer_question(
 
     trace = TraceEntry(
         step="answer_agent",
-        detail={
+        message=f"answer_agent: fallback_used={fallback_used}",
+        data={
             "framework": "google-adk",
             "agent": "answer_agent",
             "tool_calls": recorder.calls,

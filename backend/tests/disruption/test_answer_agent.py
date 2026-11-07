@@ -1,6 +1,13 @@
+from datetime import datetime, timezone
+
 from app.disruption.agents.answer_agent import answer_question
-from app.disruption.assessment.mock import assess_trip
-from app.disruption.entitlements.mock import evaluate_entitlements
+from app.disruption.assessment.service import assess_trip
+from app.disruption.assessment.sources import get_operational_events, get_trip_context
+from app.disruption.contracts import ResolveRequest
+from app.disruption.entitlements.service import decide
+from app.disruption.entitlements.sources import get_eligible_options, get_policy_rules
+
+NOW = datetime(2026, 9, 15, 11, 3, 0, tzinfo=timezone.utc)
 
 
 class FakeAgentRunner:
@@ -17,8 +24,14 @@ class FakeAgentRunner:
 
 
 def _trip_and_decision():
-    trip = assess_trip("ABC123")
-    decision = evaluate_entitlements(trip)
+    trip = assess_trip(get_trip_context("ABC123"), get_operational_events(["S1", "S2"]))
+    decision = decide(
+        trip,
+        policy=get_policy_rules("DELAY"),
+        options_response=get_eligible_options({"booking_id": trip.booking_id}),
+        request=ResolveRequest(trip.booking_id),
+        now=NOW,
+    )
     return trip, decision
 
 
@@ -62,7 +75,7 @@ def test_timeout_sends_template_and_human_case_still_required():
 
 def test_valid_draft_is_sent_and_tool_calls_recorded():
     trip, decision = _trip_and_decision()
-    recommended_flight = decision.recommended_option["flight_number"]
+    recommended_flight = decision.recommended_option.flight_number
     draft = (
         f"We can offer {recommended_flight} under {decision.policy_ref}. "
         "An agent will confirm this with you shortly."
@@ -80,4 +93,4 @@ def test_valid_draft_is_sent_and_tool_calls_recorded():
 
     assert result.fallback_used is False
     assert result.message == draft
-    assert len(result.trace.detail["tool_calls"]) == 2
+    assert len(result.trace.data["tool_calls"]) == 2
