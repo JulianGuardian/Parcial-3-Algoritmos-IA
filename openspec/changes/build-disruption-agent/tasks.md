@@ -31,12 +31,12 @@
 - [x] 5.1 Implement the faithfulness check (every entitlement maps to an applied rule and a returned `policy_ref`; every flight in the reply is in `options`), and verify that it fails on a response listing an unbacked `MEAL_VOUCHER`
 - [x] 5.2 Add the four real-model evaluation cases under `backend/evals/` (`pytest -m llm`: target conversation, contradictory sources GHI789, malicious input, failed write DEF456 with two 503), each asserting the trajectory, the `AgentResponse` and faithfulness, and verify that they run and write `backend/evals/results/latest.json` with the model id and date (not overwritten on quota errors)
 - [x] 5.3 Save one full-run trace of the target conversation to `docs/trace-abc123.jsonl`, and verify that the PII scan test passes on the saved file
-- [ ] 5.4 Write the evaluation report section (latest results or the labeled saved run, and at least one failure the checks revealed or a stated limit of what they prove), and verify that it cites the results file
+- [x] 5.4 Write the evaluation report section (latest results or the labeled saved run, and at least one failure the checks revealed or a stated limit of what they prove), and verify that it cites the results file
 
 ## 6. Deliverables
 
-- [ ] 6.1 Update `README.md` (≤ 2 pages): problem and expected outcome; assumptions and scope, including the resolved ambiguities; the B(a) architecture with the diagram; answers to Part A items 1–4 (design D8, D7, D3, D9); decisions and discarded alternatives; risks and next steps; validation; and run instructions for local, Docker and evaluations. Verify that the commands run as written
-- [ ] 6.2 Update `AI_USAGE.md` (≤ 1 page) for Part A item 5 with the Part B work, and verify that it still fits on one page and covers every required section
+- [x] 6.1 Update `README.md` (≤ 2 pages): problem and expected outcome; assumptions and scope, including the resolved ambiguities; the B(a) architecture with the diagram; answers to Part A items 1–4 (design D8, D7, D3, D9); decisions and discarded alternatives; risks and next steps; validation; and run instructions for local, Docker and evaluations. Verify that the commands run as written
+- [x] 6.2 Update `AI_USAGE.md` (≤ 1 page) for Part A item 5 with the Part B work, and verify that it still fits on one page and covers every required section
 
 ## Workflow follow-up
 
