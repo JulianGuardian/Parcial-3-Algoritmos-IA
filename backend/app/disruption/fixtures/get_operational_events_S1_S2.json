@@ -1,0 +1,42 @@
+{
+  "events": [
+    {
+      "event_id": "E-1001",
+      "segment_id": "S1",
+      "type": "DELAY",
+      "delay_minutes": 160,
+      "new_departure": "17:10",
+      "source": "OPS_CORE",
+      "recorded_at": "2026-09-15T10:48:00Z"
+    },
+    {
+      "event_id": "E-1007",
+      "segment_id": "S1",
+      "type": "GATE_CHANGE",
+      "gate": "24",
+      "source": "AIRPORT_FEED",
+      "recorded_at": "2026-09-15T10:55:00Z"
+    },
+    {
+      "event_id": "E-1012",
+      "segment_id": "S1",
+      "type": "STATUS",
+      "status": "ON_TIME",
+      "source": "LEGACY_MIRROR",
+      "recorded_at": "2026-09-15T09:30:00Z"
+    },
+    {
+      "event_id": "E-2003",
+      "segment_id": "S2",
+      "type": "STATUS",
+      "status": "SCHEDULED",
+      "source": "OPS_CORE",
+      "recorded_at": "2026-09-15T10:48:00Z"
+    }
+  ],
+  "_meta": {
+    "retrieved_at": "2026-09-15T11:02:33Z",
+    "sources_available": ["OPS_CORE", "AIRPORT_FEED", "LEGACY_MIRROR"],
+    "sources_degraded": ["LEGACY_MIRROR"]
+  }
+}

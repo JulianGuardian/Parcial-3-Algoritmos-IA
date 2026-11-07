@@ -1,0 +1,41 @@
+{
+  "options": [
+    {
+      "option_id": "O1",
+      "type": "REBOOK",
+      "flight_number": "NB2412",
+      "origin": "LIM",
+      "destination": "MEX",
+      "date": "2026-09-16",
+      "departure": "08:15",
+      "fare_difference": 0,
+      "seats_available": 4,
+      "policy_ref": "POL-DELAY-2026-03",
+      "confidence": "HIGH"
+    },
+    {
+      "option_id": "O2",
+      "type": "REBOOK",
+      "flight_number": "NB2450",
+      "origin": "LIM",
+      "destination": "MEX",
+      "date": "2026-09-15",
+      "departure": "23:40",
+      "fare_difference": 180000,
+      "currency": "CLP",
+      "seats_available": 1,
+      "policy_ref": "POL-DELAY-2026-03",
+      "confidence": "MEDIUM"
+    },
+    {
+      "option_id": "O3",
+      "type": "REFUND",
+      "policy_ref": "POL-REFUND-2026-01",
+      "confidence": "LOW"
+    }
+  ],
+  "_meta": {
+    "retrieved_at": "2026-09-15T11:02:35Z",
+    "ttl_seconds": 120
+  }
+}

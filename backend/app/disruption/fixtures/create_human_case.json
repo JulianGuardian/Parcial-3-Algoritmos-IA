@@ -1,0 +1,7 @@
+{
+  "201": {
+    "case_id": "HC-4471",
+    "queue": "DISRUPTION_L2",
+    "sla_minutes": 45
+  }
+}

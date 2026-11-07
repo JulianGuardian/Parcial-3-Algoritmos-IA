@@ -1,0 +1,50 @@
+{
+  "booking_id": "ABC123",
+  "passengers": [
+    {
+      "passenger_id": "P1",
+      "name": "María Silva",
+      "type": "ADULT",
+      "email": "maria.silva@example.com",
+      "phone": "+56 9 8765 4321",
+      "document_id": "12.345.678-9",
+      "loyalty_tier": "GOLD"
+    },
+    {
+      "passenger_id": "P2",
+      "name": "Tomás Silva",
+      "type": "CHILD",
+      "age": 7
+    }
+  ],
+  "segments": [
+    {
+      "segment_id": "S1",
+      "flight_number": "NB500",
+      "origin": "SCL",
+      "destination": "LIM",
+      "date": "2026-09-15",
+      "scheduled_departure": "14:30",
+      "scheduled_arrival": "17:55"
+    },
+    {
+      "segment_id": "S2",
+      "flight_number": "NB2410",
+      "origin": "LIM",
+      "destination": "MEX",
+      "date": "2026-09-15",
+      "scheduled_departure": "19:05",
+      "scheduled_arrival": "23:40"
+    }
+  ],
+  "fare_conditions": {
+    "changeable": true,
+    "refundable": false,
+    "fare_family": "LIGHT"
+  },
+  "_meta": {
+    "retrieved_at": "2026-09-15T11:02:31Z",
+    "completeness": "PARTIAL",
+    "missing_fields": ["fare_conditions.change_penalty_amount"]
+  }
+}

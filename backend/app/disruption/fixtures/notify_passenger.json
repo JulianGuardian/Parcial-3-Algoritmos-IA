@@ -1,0 +1,11 @@
+{
+  "202": {
+    "notification_id": "NT-9912",
+    "channel": "PUSH",
+    "status": "QUEUED"
+  },
+  "422": {
+    "error": "UNVALIDATED_CONTENT",
+    "detail": "missing policy_ref"
+  }
+}
