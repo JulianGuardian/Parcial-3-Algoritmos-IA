@@ -23,5 +23,8 @@ dev = [
 [tool.setuptools.packages.find]
 include = ["app*"]
 
+[tool.setuptools.package-data]
+"app.disruption.fixtures" = ["*.json"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]

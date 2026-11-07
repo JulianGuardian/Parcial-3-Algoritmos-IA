@@ -8,19 +8,19 @@
 
 ## 2. Trip disruption assessment
 
-- [ ] 2.1 Implement mock read adapters `get_trip_context` and `get_operational_events` that return the fixtures, and verify with a test that they return the contract shapes
-- [ ] 2.2 Implement PII stripping (drop `document_id`, mask the email and phone, keep first names), and verify with a test that "12.345.678-9" never appears in `TripState`
-- [ ] 2.3 Implement source reconciliation (priority, degraded-source exclusion, recency, `CONFLICTING` on incompatible trusted sources), and verify tests for "E-1012 discarded" and "trusted sources disagree → CONFLICTING"
-- [ ] 2.4 Implement the freshness check (configurable maximum age, default 2 h, measured against `_meta.retrieved_at`; `UNVERIFIED` when only stale events exist), and verify tests for "E-1001 is fresh" and "only a stale event → S1 UNVERIFIED and human review required"
-- [ ] 2.5 Implement estimated arrival and missed-connection detection with a configurable MCT (default 60), and verify a test where S1 arrives at 20:35 and S2 (19:05) is missed
-- [ ] 2.6 Implement relevance classification and `missing_fields` tracking, and verify tests for "missed connection is relevant", "gate change only is informational" and "change_penalty_amount is listed as missing"
+- [x] 2.1 Implement mock read adapters `get_trip_context` and `get_operational_events` that return the fixtures, and verify with a test that they return the contract shapes
+- [x] 2.2 Implement PII stripping (drop `document_id`, mask the email and phone, keep first names), and verify with a test that "12.345.678-9" never appears in `TripState`
+- [x] 2.3 Implement source reconciliation (priority, degraded-source exclusion, recency, `CONFLICTING` on incompatible trusted sources), and verify tests for "E-1012 discarded" and "trusted sources disagree → CONFLICTING"
+- [x] 2.4 Implement the freshness check (configurable maximum age, default 2 h, measured against `_meta.retrieved_at`; `UNVERIFIED` when only stale events exist), and verify tests for "E-1001 is fresh" and "only a stale event → S1 UNVERIFIED and human review required"
+- [x] 2.5 Implement estimated arrival and missed-connection detection with a configurable MCT (default 60), and verify a test where S1 arrives at 20:35 and S2 (19:05) is missed
+- [x] 2.6 Implement relevance classification and `missing_fields` tracking, and verify tests for "missed connection is relevant", "gate change only is informational" and "change_penalty_amount is listed as missing"
 
 ## 3. Disruption entitlements
 
-- [ ] 3.1 Implement mock adapters `get_policy_rules` and `get_eligible_options` from the fixtures, and verify with a test that they return the contract shapes
-- [ ] 3.2 Implement rule evaluation for R1–R5 using only the current policy version, and verify a test for ABC123 where R3 and R5 apply, R1, R2 and R4 do not apply, and the reasons and `POL-DELAY-2026-03` are recorded
-- [ ] 3.3 Implement option filtering (TTL → seats → policy consistency → confidence and evaluated policy) with reason codes, and verify tests where O2 is rejected (`INSUFFICIENT_SEATS`, `POLICY_INCONSISTENT`), O3 is `REQUIRES_AGENT_REVIEW`, and every option is rejected once past the TTL
-- [ ] 3.4 Implement recommendation selection and the human-approval gate (`requires_human` for R4, R5, `CONFLICTING` and decision-relevant missing data), and verify a test where ABC123 recommends O1 with `requires_human` true and reason `R5_PRIORITY_HANDLING`, plus a test where `compensation_requested` true adds `R4_CASH_COMPENSATION`
+- [x] 3.1 Implement mock adapters `get_policy_rules` and `get_eligible_options` from the fixtures, and verify with a test that they return the contract shapes
+- [x] 3.2 Implement rule evaluation for R1–R5 using only the current policy version, and verify a test for ABC123 where R3 and R5 apply, R1, R2 and R4 do not apply, and the reasons and `POL-DELAY-2026-03` are recorded
+- [x] 3.3 Implement option filtering (TTL → seats → policy consistency → confidence and evaluated policy) with reason codes, and verify tests where O2 is rejected (`INSUFFICIENT_SEATS`, `POLICY_INCONSISTENT`), O3 is `REQUIRES_AGENT_REVIEW`, and every option is rejected once past the TTL
+- [x] 3.4 Implement recommendation selection and the human-approval gate (`requires_human` for R4, R5, `CONFLICTING` and decision-relevant missing data), and verify a test where ABC123 recommends O1 with `requires_human` true and reason `R5_PRIORITY_HANDLING`, plus a test where `compensation_requested` true adds `R4_CASH_COMPENSATION`
 
 ## 4. Passenger query intake
 
