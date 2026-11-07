@@ -1,11 +1,12 @@
 import { Box, Paper, Typography } from '@mui/material'
 import { useEffect, useRef } from 'react'
+import type { ReactNode } from 'react'
 
 import { StatusBanner } from '../../components/StatusBanner/StatusBanner'
 import { ChatMessage } from './components/ChatMessage'
 import { Composer } from './components/Composer'
 import { EmptyConversationState } from './components/EmptyConversationState'
-import type { Message } from './types'
+import type { Message, RecommendedOption } from './types'
 
 export interface ChatPageProps {
   messages: Message[]
@@ -13,6 +14,10 @@ export interface ChatPageProps {
   error?: string | null
   isSubmitting?: boolean
   onSubmit: (message: string) => void | Promise<void>
+  /** Confirms the option of the latest answer (sends `confirm_option_id`). */
+  onConfirm?: (option: RecommendedOption) => void
+  /** Replaces the composer, for example with the booking step before a conversation exists. */
+  footer?: ReactNode
 }
 
 const horizontalPadding = { xs: 2, md: 4 }
@@ -23,6 +28,8 @@ export function ChatPage({
   error = null,
   isSubmitting = false,
   onSubmit,
+  onConfirm,
+  footer,
 }: Readonly<ChatPageProps>) {
   const messagesEndRef = useRef<HTMLDivElement>(null)
   // undefined: nothing displayed yet, so the next display is the first one.
@@ -30,6 +37,7 @@ export function ChatPage({
 
   const lastMessageId = messages.length > 0 ? messages[messages.length - 1].id : null
   const hasMessages = messages.length > 0
+  const lastAssistantId = [...messages].reverse().find((message) => message.role === 'assistant')?.id ?? null
 
   useEffect(() => {
     if (isLoading) {
@@ -95,7 +103,12 @@ export function ChatPage({
             <>
               {!hasMessages ? <EmptyConversationState /> : null}
               {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
+                <ChatMessage
+                  key={message.id}
+                  message={message}
+                  onConfirm={message.id === lastAssistantId ? onConfirm : undefined}
+                  confirmDisabled={isSubmitting}
+                />
               ))}
               {/* '1px', not 1: in sx a bare 1 means 100% and would add a full-height blank block. */}
               <Box ref={messagesEndRef} sx={{ height: '1px', flexShrink: 0 }} />
@@ -113,7 +126,7 @@ export function ChatPage({
             bgcolor: 'background.paper',
           }}
         >
-          <Composer disabled={isSubmitting} onSubmit={onSubmit} />
+          {footer ?? <Composer disabled={isSubmitting} onSubmit={onSubmit} />}
         </Box>
       </Paper>
     </Box>

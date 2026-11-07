@@ -1,5 +1,6 @@
 import { screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 
 import { renderWithTheme } from '../../../testUtils'
 import { monoFont } from '../../../utils/theme'
@@ -229,5 +230,58 @@ describe('DecisionCard internal data', () => {
     }
     expect(text).not.toMatch(/\bR[1-5]\b/)
     expect(text).not.toMatch(/\b[A-Z]{2,}_[A-Z_]+\b/)
+  })
+})
+
+describe('DecisionCard confirmation', () => {
+  function confirmable(): DisruptionDecision {
+    const decision = abc123()
+    decision.decision.requires_human = false
+    decision.decision.human_reasons = []
+    decision.actions.human_case = null
+    decision.decision.recommended_option = { ...decision.decision.recommended_option!, option_id: 'O1' }
+    decision.next_step = 'CONFIRM_OPTION'
+    return decision
+  }
+
+  it('offers the confirm button only for CONFIRM_OPTION, and sends the option', async () => {
+    const onConfirm = vi.fn()
+    const user = userEvent.setup({ delay: null })
+    renderWithTheme(<DecisionCard decision={confirmable()} onConfirm={onConfirm} />)
+
+    await user.click(screen.getByRole('button', { name: 'Confirm this option' }))
+
+    expect(onConfirm).toHaveBeenCalledWith(expect.objectContaining({ option_id: 'O1', flight_number: 'NB2412' }))
+  })
+
+  it('shows no confirm button when a human must decide', () => {
+    const decision = abc123()
+    decision.next_step = 'CONFIRM_OPTION'
+    renderWithTheme(<DecisionCard decision={decision} onConfirm={vi.fn()} />)
+
+    expect(screen.queryByRole('button', { name: 'Confirm this option' })).not.toBeInTheDocument()
+  })
+
+  it('shows no confirm button without a handler, for example on an earlier answer', () => {
+    renderWithTheme(<DecisionCard decision={confirmable()} />)
+
+    expect(screen.queryByRole('button', { name: 'Confirm this option' })).not.toBeInTheDocument()
+  })
+
+  it('explains a pending rebooking request', () => {
+    const decision = confirmable()
+    decision.next_step = 'REBOOKING_PENDING'
+    renderWithTheme(<DecisionCard decision={decision} onConfirm={vi.fn()} />)
+
+    expect(screen.getByText(/We have requested this change\./)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Confirm this option' })).not.toBeInTheDocument()
+  })
+
+  it('says when the standard assistant answered', () => {
+    const decision = confirmable()
+    decision.degraded = true
+    renderWithTheme(<DecisionCard decision={decision} />)
+
+    expect(screen.getByText('This answer was prepared by our standard assistant.')).toBeInTheDocument()
   })
 })

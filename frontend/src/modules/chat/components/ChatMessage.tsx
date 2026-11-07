@@ -2,14 +2,17 @@ import { Avatar, Box, Paper, Typography } from '@mui/material'
 
 import { BotAvatarIcon } from '../../../icon/BotAvatarIcon'
 import { UserAvatarIcon } from '../../../icon/UserAvatarIcon'
-import type { Message } from '../types'
+import type { Message, RecommendedOption } from '../types'
 import { DecisionCard } from './DecisionCard'
 
 interface ChatMessageProps {
   message: Message
+  /** Only the latest answer offers the confirmation; earlier cards are read-only. */
+  onConfirm?: (option: RecommendedOption) => void
+  confirmDisabled?: boolean
 }
 
-export function ChatMessage({ message }: ChatMessageProps) {
+export function ChatMessage({ message, onConfirm, confirmDisabled = false }: ChatMessageProps) {
   const isAssistantLike = message.role !== 'user'
   const decision = isAssistantLike ? message.decision : null
 
@@ -63,7 +66,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </Typography>
         </Paper>
 
-        {decision ? <DecisionCard decision={decision} /> : null}
+        {decision ? <DecisionCard decision={decision} onConfirm={onConfirm} confirmDisabled={confirmDisabled} /> : null}
       </Box>
     </Box>
   )

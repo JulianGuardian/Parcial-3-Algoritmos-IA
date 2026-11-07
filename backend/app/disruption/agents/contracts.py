@@ -159,6 +159,9 @@ class EntitlementOut(BaseModel):
 
 class AgentResponse(BaseModel):
     what_happened: list[str]
+    # Passenger-safe card data (change connect-chat-to-agent): same evaluation as the other fields.
+    segments: list[SegmentView] = Field(default_factory=list)
+    human_reasons: list[str] = Field(default_factory=list)
     entitlements: list[EntitlementOut]
     options: list[OptionView]
     next_step: NextStep

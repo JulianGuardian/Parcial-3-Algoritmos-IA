@@ -28,9 +28,16 @@ services:
     image: nubara-frontend:dev
     ports:
       - "5173:5173"
+    depends_on:
+      - backend
     environment:
       # File events do not cross a Windows bind mount, so Vite polls for changes.
       VITE_USE_POLLING: "true"
+      # The browser calls /api on :5173; the Vite dev server forwards it to the backend service.
+      API_PROXY_TARGET: "http://backend:8000"
+      # The statement's sample options expire at 2026-09-15T11:04:35Z, so the demo pins the evaluation
+      # time just before it. Empty it to use the real clock.
+      VITE_DEMO_NOW: "2026-09-15T11:03:00Z"
     volumes:
       # Sources are mounted so edits reload the page without rebuilding the image.
       - ./frontend:/app

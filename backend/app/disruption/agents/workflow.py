@@ -43,6 +43,7 @@ from app.disruption.agents.contracts import (
     STATE_NOW,
     STATE_REBOOKING,
     STATE_TOOL_LOG,
+    REQUEST_REBOOKING,
     AgentResponse,
 )
 from app.disruption.agents.disruption_tools import Evaluation, ToolDeps, build_tools, evaluate
@@ -294,8 +295,12 @@ def _run_degraded(
     now: str | None,
     request_id: str,
     failure: str,
+    confirm_option_id: str | None = None,
 ) -> TurnOutcome:
-    """Keyword intake + the deterministic pipeline + the template reply."""
+    """Keyword intake + the deterministic pipeline + the template reply.
+
+    A structured `confirm_option_id` is still honored, through the same guardrails.
+    """
     keyword_settings = Settings(_env_file=None, intent_classifier="keyword")
     now_dt = _parse_now(now) if now else None
 
@@ -339,6 +344,23 @@ def _run_degraded(
         policy={},
         now=resolution.evaluated_at,
     )
+
+    if confirm_option_id:
+        # A structured confirmation does not need the model: apply it with the same
+        # guardrails the agent's tool call goes through, so degraded mode can still rebook.
+        fake_state.update(
+            {
+                STATE_BOOKING_ID: booking_id,
+                STATE_NOW: now,
+                STATE_CONFIRMED_OPTION: confirm_option_id,
+                STATE_INTAKE: {
+                    "compensation_requested": any(r.rule_id == "R4" for r in resolution.decision.applied_rules),
+                },
+            }
+        )
+        _apply_confirmation(fake_state, deps, confirm_option_id)
+        evaluation = evaluate(fake_state, deps)
+
     response = build_response(fake_state, deps, reply_draft=None, degraded=True, evaluation=evaluation)
 
     trace = [
@@ -349,6 +371,28 @@ def _run_degraded(
         ],
     ]
     return TurnOutcome(response=response, trace=trace, evaluation=evaluation)
+
+
+class _StateContext:
+    """Minimal stand-in for ADK's ToolContext when code, not the model, calls a tool."""
+
+    def __init__(self, state: dict[str, Any]):
+        self.state = state
+
+
+class _NamedTool:
+    def __init__(self, name: str):
+        self.name = name
+
+
+def _apply_confirmation(state: dict[str, Any], deps: ToolDeps, option_id: str) -> None:
+    """Run the guarded rebooking exactly as the agent would: callback first, then the tool."""
+    ctx = _StateContext(state)
+    blocked = make_before_tool_callback(deps)(_NamedTool(REQUEST_REBOOKING), {"option_id": option_id}, ctx)
+    if blocked is None:
+        tools = {fn.__name__: fn for fn in build_tools(deps)}
+        tools[REQUEST_REBOOKING](option_id, ctx)
+    enforce_escalation(state, deps)
 
 
 def _parse_now(value: str) -> datetime:
@@ -415,4 +459,5 @@ def run_turn(
             now=now,
             request_id=request_id,
             failure=type(exc).__name__,
+            confirm_option_id=confirm_option_id,
         )
