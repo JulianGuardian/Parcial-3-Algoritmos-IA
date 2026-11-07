@@ -21,3 +21,27 @@ services:
       - --no-access-log
       - --reload
       - --reload-dir=/app/app
+
+  frontend:
+    build:
+      context: ./frontend
+    image: nubara-frontend:dev
+    ports:
+      - "5173:5173"
+    environment:
+      # File events do not cross a Windows bind mount, so Vite polls for changes.
+      VITE_USE_POLLING: "true"
+    volumes:
+      # Sources are mounted so edits reload the page without rebuilding the image.
+      - ./frontend:/app
+      # The container keeps its own node_modules: the host's contain binaries built for another platform.
+      - frontend_node_modules:/app/node_modules
+    # Installs first so a changed lockfile takes effect on restart (the volume does not follow image
+    # rebuilds), then replaces the shell with Vite so it receives the stop signal.
+    command:
+      - sh
+      - -c
+      - pnpm install --frozen-lockfile && exec pnpm run dev --host 0.0.0.0 --port 5173 --strictPort
+
+volumes:
+  frontend_node_modules:

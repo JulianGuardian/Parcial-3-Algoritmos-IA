@@ -1,0 +1,13 @@
+node_modules/
+.pnpm-store/
+dist/
+.vite/
+coverage/
+*.log
+.env
+.env.*
+!.env.example
+.git/
+.gitignore
+Dockerfile
+.dockerignore

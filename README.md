@@ -41,6 +41,24 @@ Key decisions (details in `design.md`):
 - Options past their TTL, without seats for the whole party, contradicting the applied entitlement, or with low confidence are never recommended.
 - A human must approve whenever a rule requires it (R4, R5), the assessment is `CONFLICTING` or `UNVERIFIED`, or data the decision needs is missing.
 
+## Frontend (React + Vite)
+
+The passenger chat lives in `frontend/` (React 19, TypeScript, Vite, MUI, pnpm). It shows the conversation and, under each assistant answer, a card that explains the disruption: what happened to each flight, the passenger's benefits, the proposed option at no extra cost and whether an agent will follow up. The card shows only what a passenger may see.
+
+The screen is a pure UI for now: it makes no API calls and shows example data shaped like the response of `POST /api/v1/disruptions/{booking_id}/resolve`. Connecting it to the backend is a later change. The interface text is in English and the theme follows the system's light or dark preference.
+
+The easiest way to run it is with Docker together with the backend (see [Run with Docker](#3a-run-with-docker-recommended)). To run it on its own you need Node.js 24.22.1 or newer in the 24.x line and pnpm (see `frontend/.nvmrc`):
+
+```bash
+cd frontend
+pnpm install
+pnpm run dev        # http://localhost:5173
+pnpm run test       # unit and component tests
+pnpm run build      # type-check and production build
+```
+
+More details in [`frontend/README.md`](frontend/README.md).
+
 ## How to run the project
 
 ### Requirements
@@ -49,9 +67,10 @@ Key decisions (details in `design.md`):
 |------|---------|------------|
 | Git | any | cloning the repo |
 | Docker Desktop (or Docker Engine + Compose v2) | Compose ≥ 2.24 | running with Docker |
-| Python | 3.12 or higher | running without Docker and tests |
+| Python | 3.12 or higher | running the backend without Docker and its tests |
+| Node.js + pnpm | 24.22.1 or newer in 24.x, pnpm 10.33.0 | running the frontend without Docker and its tests |
 
-You do not need to install Python if you run with Docker.
+You do not need to install Python or Node.js if you run with Docker.
 
 ### 1. Clone the repository
 
@@ -78,10 +97,19 @@ Open Docker Desktop and wait until the engine is running. Then, from the repo ro
 docker compose up --build
 ```
 
-- Backend at <http://localhost:8000> and documentation at <http://localhost:8000/docs>.
-- The `backend/app` code is mounted: saving a file reloads the service automatically.
-- To run it in the background: `docker compose up --build -d`, and follow the logs with `docker compose logs -f backend`.
-- To stop it: `Ctrl+C` (or `docker compose down` if you used `-d`).
+This starts two services:
+
+| Service | URL | Notes |
+|---------|-----|-------|
+| `backend` | <http://localhost:8000> (docs at <http://localhost:8000/docs>) | FastAPI; `backend/app` is mounted, so saving a file reloads it |
+| `frontend` | <http://localhost:5173> | Vite dev server; `frontend/` is mounted, so saving a file updates the page without a rebuild |
+
+- The first start is slower: it downloads the Node image and installs the frontend dependencies inside the container.
+- The container uses its own `node_modules` (a Docker volume), never the one on your machine. If you change dependencies in `frontend/package.json`, restart the service (`docker compose restart frontend`) and it installs what the lockfile says.
+- To start only one service: `docker compose up --build backend` or `docker compose up --build frontend`.
+- To run it in the background: `docker compose up --build -d`, and follow the logs with `docker compose logs -f frontend` (or `backend`).
+- To stop it: `Ctrl+C` (or `docker compose down` if you used `-d`). To also reset the frontend dependencies, use `docker compose down -v`.
+- On Linux the container user (uid 1000) must be able to write in `frontend/`; if your user has a different uid, set `user` for the service in a local compose override.
 
 ### 3b. Run without Docker
 
@@ -121,6 +149,8 @@ Or open <http://localhost:8000/docs> in your browser. To see the `X-Request-ID` 
 curl -i -H "X-Request-ID: my-test-1" http://localhost:8000/health
 ```
 
+For the frontend, open <http://localhost:5173>: you should see the chat with the example conversation.
+
 ### Tests
 
 With the virtual environment active, from `backend/`:
@@ -151,6 +181,8 @@ An invalid value makes the service fail at startup and name the offending variab
 |---------|---------------|
 | `failed to connect to the docker API` | Docker Desktop is not running. Open it and wait for "Engine running". |
 | `port is already allocated` / port 8000 in use | Another process is using port 8000. Stop it or change the mapping in `docker-compose.yml` (for example `"8001:8000"`). |
+| Port 5173 in use (the frontend exits with `Port 5173 is already in use`) | Another Vite or tool uses 5173. Stop it or change the mapping in `docker-compose.yml`. |
+| `ERR_PNPM_...` in `docker compose logs frontend`, or a dependency that is missing | The `frontend_node_modules` volume is out of date or was interrupted. Run `docker compose down -v` and start again. |
 | `ValidationError ... log_level` at startup | Invalid value in `.env`. Use one of the values in the configuration table. |
 | `env_file ... required` not supported | Old Compose version. Update Docker Desktop (Compose ≥ 2.24). |
-| Reload does not detect changes on Windows | A polling reloader is used; wait 1–2 seconds after saving. |
+| Reload does not detect changes on Windows | Both services use a polling reloader because file events do not cross the Windows mount; wait 1–2 seconds after saving. |
