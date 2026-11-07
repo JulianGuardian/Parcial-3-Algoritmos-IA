@@ -8,6 +8,8 @@ from app.disruption.actions.service import (
     RebookingStatus,
     execute_actions,
     idempotency_key,
+    open_human_case,
+    rebook_option,
 )
 from app.disruption.actions.write_tools import HUMAN_CASE, REBOOKING, MockWriteTools
 from app.disruption.contracts import ResolveRequest
@@ -74,53 +76,73 @@ def test_human_case_evidence_is_complete_and_has_no_document_id(abc123_state, ab
     assert "maria.silva@example.com" not in repr(evidence)
 
 
-def test_same_decision_yields_same_key(auto_decision, abc123_state):
+def test_unconfirmed_auto_decision_never_rebooks(auto_decision, abc123_state):
+    tools = MockWriteTools()
+
+    result = execute_actions(auto_decision, abc123_state, tools)
+
+    assert tools.calls_to(REBOOKING) == []
+    assert result.rebooking.status is RebookingStatus.NOT_ATTEMPTED
+    assert result.human_case is None
+    assert "awaiting passenger confirmation" in result.trace[0].message
+
+
+def test_same_decision_yields_same_key(auto_decision):
     first, second = MockWriteTools(), MockWriteTools()
 
-    execute_actions(auto_decision, abc123_state, first)
-    execute_actions(auto_decision, abc123_state, second)
+    rebook_option(auto_decision, auto_decision.recommended_option, first)
+    rebook_option(auto_decision, auto_decision.recommended_option, second)
 
     key_1 = first.calls_to(REBOOKING)[0].arguments["idempotency_key"]
     key_2 = second.calls_to(REBOOKING)[0].arguments["idempotency_key"]
     assert key_1 == key_2 == idempotency_key("ABC123", "O1", "POL-DELAY-2026-03")
 
 
-def test_auto_rebooking_is_reported_as_pending_not_confirmed(auto_decision, abc123_state):
-    result = execute_actions(auto_decision, abc123_state, MockWriteTools())
+def test_rebooking_is_reported_as_pending_not_confirmed(auto_decision):
+    outcome = rebook_option(auto_decision, auto_decision.recommended_option, MockWriteTools())
 
-    assert result.rebooking.status is RebookingStatus.PENDING
-    assert result.rebooking.request_id == "RBK-88231"
-    assert result.rebooking.expires_at == "2026-09-15T11:12:00Z"
-    assert result.human_case is None
+    assert outcome.status is RebookingStatus.PENDING
+    assert outcome.request_id == "RBK-88231"
+    assert outcome.expires_at == "2026-09-15T11:12:00Z"
 
 
-def test_duplicate_request_reuses_existing_id(auto_decision, abc123_state):
+def test_duplicate_request_reuses_existing_id(auto_decision):
     tools = MockWriteTools(rebooking_statuses=[409])
 
-    result = execute_actions(auto_decision, abc123_state, tools)
+    outcome = rebook_option(auto_decision, auto_decision.recommended_option, tools)
 
-    assert result.rebooking.status is RebookingStatus.ALREADY_EXISTS
-    assert result.rebooking.request_id == "RBK-88231"
+    assert outcome.status is RebookingStatus.ALREADY_EXISTS
+    assert outcome.request_id == "RBK-88231"
     assert len(tools.calls_to(REBOOKING)) == 1
 
 
-def test_single_timeout_is_retried_with_the_same_key(auto_decision, abc123_state):
+def test_single_timeout_is_retried_with_the_same_key(auto_decision):
     tools = MockWriteTools(rebooking_statuses=[503])
 
-    result = execute_actions(auto_decision, abc123_state, tools)
+    outcome = rebook_option(auto_decision, auto_decision.recommended_option, tools)
 
     calls = tools.calls_to(REBOOKING)
     assert len(calls) == 2
     assert calls[0].arguments["idempotency_key"] == calls[1].arguments["idempotency_key"]
-    assert result.rebooking.status is RebookingStatus.PENDING
-    assert result.human_case is None
+    assert outcome.status is RebookingStatus.PENDING
 
 
-def test_two_timeouts_make_exactly_two_calls_and_escalate(auto_decision, abc123_state):
+def test_two_timeouts_make_exactly_two_calls_and_stay_indeterminate(auto_decision):
     tools = MockWriteTools(rebooking_statuses=[503, 503])
 
-    result = execute_actions(auto_decision, abc123_state, tools)
+    outcome = rebook_option(auto_decision, auto_decision.recommended_option, tools)
 
     assert len(tools.calls_to(REBOOKING)) == 2
-    assert result.rebooking.status is RebookingStatus.INDETERMINATE
-    assert result.human_case.reasons == (REBOOKING_INDETERMINATE,)
+    assert outcome.status is RebookingStatus.INDETERMINATE
+    assert outcome.attempts == 2
+
+
+def test_open_human_case_adds_extra_evidence(abc123_state, abc123_decision):
+    tools = MockWriteTools()
+
+    case = open_human_case(
+        [REBOOKING_INDETERMINATE], abc123_decision, abc123_state, tools, extra_evidence={"confirmed_option_id": "O1"}
+    )
+
+    assert case.reasons == (REBOOKING_INDETERMINATE,)
+    assert tools.calls_to(HUMAN_CASE)[0].arguments["evidence"]["confirmed_option_id"] == "O1"

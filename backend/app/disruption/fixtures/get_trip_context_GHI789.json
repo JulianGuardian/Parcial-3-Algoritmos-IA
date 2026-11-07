@@ -1,0 +1,46 @@
+{
+  "booking_id": "GHI789",
+  "passengers": [
+    {
+      "passenger_id": "P1",
+      "name": "Ana Rojas",
+      "type": "ADULT",
+      "email": "ana.rojas@example.com",
+      "phone": "+56 9 3333 4444",
+      "document_id": "11.222.333-4",
+      "loyalty_tier": "GOLD"
+    }
+  ],
+  "segments": [
+    {
+      "segment_id": "G1",
+      "flight_number": "NB500",
+      "origin": "SCL",
+      "destination": "LIM",
+      "date": "2026-09-15",
+      "scheduled_departure": "14:30",
+      "scheduled_arrival": "17:55"
+    },
+    {
+      "segment_id": "G2",
+      "flight_number": "NB2410",
+      "origin": "LIM",
+      "destination": "MEX",
+      "date": "2026-09-15",
+      "scheduled_departure": "19:05",
+      "scheduled_arrival": "23:40"
+    }
+  ],
+  "fare_conditions": {
+    "changeable": true,
+    "refundable": false,
+    "fare_family": "LIGHT"
+  },
+  "_meta": {
+    "retrieved_at": "2026-09-15T11:02:31Z",
+    "completeness": "PARTIAL",
+    "missing_fields": [
+      "fare_conditions.change_penalty_amount"
+    ]
+  }
+}

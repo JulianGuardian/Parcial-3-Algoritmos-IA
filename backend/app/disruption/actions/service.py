@@ -3,8 +3,9 @@
 Rules:
 - A decision that requires a human never creates a rebooking request; it
   creates exactly one human case carrying every reason and the evidence.
-- A rebooking request is created only for an auto-deliverable REBOOK
-  recommendation, with an idempotency key derived from the decision.
+- A rebooking request is created only through `rebook_option`, for an
+  option the passenger confirmed (change build-disruption-agent), with an
+  idempotency key derived from the decision. `execute_actions` never rebooks.
 - 409 reuses the existing request; 503 is retried once with the same key and,
   if still indeterminate, escalated to a human.
 - A 201 `PENDING_CONFIRMATION` is reported as pending, never as confirmed.
@@ -76,6 +77,12 @@ def idempotency_key(booking_id: str, option_id: str, policy_ref: str | None) -> 
 
 
 def execute_actions(decision: Decision, state: TripState, tools: WriteTools) -> ActionResult:
+    """Deterministic actions for a decision that nobody has confirmed yet.
+
+    A rebooking is never requested here (spec `controlled-actions`,
+    "Rebooking only for a confirmed option"); the passenger must confirm an
+    option first, through `rebook_option`. Only escalation happens here.
+    """
     result = ActionResult()
     reasons = list(dict.fromkeys(decision.human_reasons))
 
@@ -83,15 +90,19 @@ def execute_actions(decision: Decision, state: TripState, tools: WriteTools) -> 
         result.trace.append(
             TraceEntry("actions", "human approval required: rebooking not executed", {"reasons": reasons})
         )
-    elif decision.auto_deliverable and _is_rebook(decision.recommended_option):
-        result.rebooking = _request_rebooking(decision, tools, result.trace)
-        if result.rebooking.status is RebookingStatus.INDETERMINATE:
-            reasons.append(REBOOKING_INDETERMINATE)
+    elif decision.auto_deliverable and is_rebook(decision.recommended_option):
+        result.trace.append(
+            TraceEntry(
+                "actions",
+                "awaiting passenger confirmation: rebooking not requested",
+                {"option": decision.recommended_option.option_id},
+            )
+        )
     else:
         result.trace.append(TraceEntry("actions", "no high-impact action to execute", {}))
 
     if reasons:
-        result.human_case = _create_human_case(reasons, decision, state, result.rebooking, tools)
+        result.human_case = open_human_case(reasons, decision, state, tools)
         result.trace.append(
             TraceEntry(
                 "human_case",
@@ -102,13 +113,24 @@ def execute_actions(decision: Decision, state: TripState, tools: WriteTools) -> 
     return result
 
 
-def _is_rebook(option: Option | None) -> bool:
+def is_rebook(option: Option | None) -> bool:
     return option is not None and option.type == "REBOOK"
 
 
-def _request_rebooking(decision: Decision, tools: WriteTools, trace: list[TraceEntry]) -> RebookingOutcome:
-    option = decision.recommended_option
-    assert option is not None
+def rebook_option(
+    decision: Decision,
+    option: Option,
+    tools: WriteTools,
+    trace: list[TraceEntry] | None = None,
+) -> RebookingOutcome:
+    """Request one rebooking for an option the passenger confirmed.
+
+    Callers (the guarded agent tool) are responsible for checking the
+    confirmation and the option's validity first. This function only
+    guarantees the write semantics: same key for the same decision, 409
+    reuse, a single 503 retry, and `INDETERMINATE` instead of guessing.
+    """
+    trace = trace if trace is not None else []
     key = idempotency_key(decision.booking_id, option.option_id, decision.policy_ref)
     payload = _option_payload(option)
 
@@ -142,14 +164,18 @@ def _request_rebooking(decision: Decision, tools: WriteTools, trace: list[TraceE
     return RebookingOutcome(RebookingStatus.INDETERMINATE, idempotency_key=key, attempts=attempt)
 
 
-def _create_human_case(
+def open_human_case(
     reasons: list[str],
     decision: Decision,
     state: TripState,
-    rebooking: RebookingOutcome,
     tools: WriteTools,
+    rebooking: RebookingOutcome | None = None,
+    extra_evidence: dict[str, Any] | None = None,
 ) -> HumanCase:
-    response = tools.create_human_case(",".join(reasons), _evidence(reasons, decision, state, rebooking))
+    """Open exactly one human case; the evidence is always built here, in code."""
+    rebooking = rebooking or RebookingOutcome(RebookingStatus.NOT_ATTEMPTED)
+    evidence = {**_evidence(reasons, decision, state, rebooking), **(extra_evidence or {})}
+    response = tools.create_human_case(",".join(reasons), evidence)
     body = response.body
     return HumanCase(
         case_id=body["case_id"],

@@ -31,18 +31,25 @@ class ValidationResult:
     reason: str | None = None
 
 
-def _mentions_other_flight(draft: str, recommended_flight: str | None) -> bool:
+def _mentions_other_flight(draft: str, recommended_flight: str | None, allowed: frozenset[str]) -> bool:
     flight_numbers = set(re.findall(r"\b[A-Z]{2}\d{3,4}\b", draft))
     if recommended_flight:
         flight_numbers.discard(recommended_flight)
-    return bool(flight_numbers)
+    return bool(flight_numbers - allowed)
 
 
-def validate_answer_draft(draft: str, decision: Decision) -> ValidationResult:
+def validate_answer_draft(
+    draft: str,
+    decision: Decision,
+    *,
+    own_flights: frozenset[str] | set[str] = frozenset(),
+) -> ValidationResult:
+    """`own_flights` are the passenger's booked segments: naming them to
+    explain what happened is allowed; any other flight is not."""
     recommended = decision.recommended_option
     recommended_flight = recommended.flight_number if recommended is not None else None
 
-    if _mentions_other_flight(draft, recommended_flight):
+    if _mentions_other_flight(draft, recommended_flight, frozenset(own_flights)):
         return ValidationResult(False, "mentions_other_option")
 
     if decision.policy_ref and decision.policy_ref not in draft:
