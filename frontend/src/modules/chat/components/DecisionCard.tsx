@@ -1,14 +1,17 @@
-import { Box, Chip, Paper, Typography, useTheme } from '@mui/material'
+import { Box, Button, Chip, Paper, Typography, useTheme } from '@mui/material'
 import { useId } from 'react'
 import type { ReactNode } from 'react'
 
 import { formatClock, formatDate } from '../../../utils/time'
 import { appPalette, monoFont } from '../../../utils/theme'
-import { entitlementLabel, humanReasonLabel, isVerifiedStatus, statusKind, statusLabel } from '../labels'
+import { entitlementLabel, humanReasonLabel, isVerifiedStatus, nextStepText, statusKind, statusLabel } from '../labels'
 import type { DisruptionDecision, RecommendedOption, SegmentSummary } from '../types'
 
 interface DecisionCardProps {
   decision: DisruptionDecision
+  /** Shown only when the next step is CONFIRM_OPTION; sends the structured confirmation. */
+  onConfirm?: (option: RecommendedOption) => void
+  confirmDisabled?: boolean
 }
 
 const sectionTitleSx = {
@@ -112,7 +115,7 @@ function Reference({ label, value }: { label: string; value: string }) {
   )
 }
 
-export function DecisionCard({ decision }: DecisionCardProps) {
+export function DecisionCard({ decision, onConfirm, confirmDisabled = false }: DecisionCardProps) {
   const titleId = useId()
   const segments = decision.assessment.segments
   const benefits = unique(decision.decision.applied_rules.map((rule) => entitlementLabel(rule.entitlement)))
@@ -121,6 +124,9 @@ export function DecisionCard({ decision }: DecisionCardProps) {
   const policyRef = decision.decision.policy_ref
   const caseId = decision.actions.human_case?.case_id
   const missed = segments.filter((segment) => segment.missed_connection)
+  const nextStep = decision.next_step ?? null
+  const canConfirm = nextStep === 'CONFIRM_OPTION' && !decision.decision.requires_human && Boolean(option?.option_id) && Boolean(onConfirm)
+  const otherStepText = !decision.decision.requires_human && nextStep && nextStep !== 'CONFIRM_OPTION' ? nextStepText(nextStep) : null
 
   return (
     <Paper component="section" aria-labelledby={titleId} sx={{ p: 3, width: '100%', bgcolor: 'background.paper' }}>
@@ -174,6 +180,32 @@ export function DecisionCard({ decision }: DecisionCardProps) {
             </Box>
           ) : null}
         </Section>
+      ) : null}
+
+      {canConfirm && option ? (
+        <Section title="Next step">
+          <Typography>{nextStepText('CONFIRM_OPTION')}</Typography>
+          <Button
+            variant="contained"
+            sx={{ mt: 1.5 }}
+            disabled={confirmDisabled}
+            onClick={() => onConfirm?.(option)}
+          >
+            Confirm this option
+          </Button>
+        </Section>
+      ) : null}
+
+      {otherStepText ? (
+        <Section title="Next step">
+          <Typography>{otherStepText}</Typography>
+        </Section>
+      ) : null}
+
+      {decision.degraded ? (
+        <Typography variant="caption" color="text.secondary" component="p" sx={{ mt: 2, mb: 0 }}>
+          This answer was prepared by our standard assistant.
+        </Typography>
       ) : null}
 
       {policyRef || caseId ? (

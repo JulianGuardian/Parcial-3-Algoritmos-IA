@@ -57,7 +57,7 @@ Two agents, not one: the agent that reads raw passenger text has no tools, so a 
 
 - **Free-tier availability.** During this session, `gemini-3.8-flash` and `gemini-3-flash-preview` returned `503`/`429` under real load; `gemini-flash-lite-latest` was reachable. `INTENT_MODEL` is a setting precisely so the deployed model can be swapped without a code change, and degradation ensures the service stays correct either way.
 - **A confirmed rebooking can still be blocked.** The callback re-validates the option against a fresh `decide()` call at request time; an option that expired or whose party no longer fits is refused with a typed reason, not silently retried.
-- **The frontend is a pure UI mock.** `frontend/` renders the chat and the decision card against example data; it makes no API call yet. Wiring it to `/api/v1/conversations` is a later change.
+- **The frontend runs only on the Vite dev server.** It reaches the API through the dev proxy, and there is no production build or hosting yet.
 - Next steps: a persistent session store (today: in-memory only, lost on restart), more policy scenarios beyond `DELAY`, and a judge-free automated faithfulness score across more paraphrases of the target question.
 
 ## Validation
@@ -71,7 +71,18 @@ Two agents, not one: the agent that reads raw passenger text has no tools, so a 
 
 The passenger chat lives in `frontend/` (React 19, TypeScript, Vite, MUI, pnpm). It shows the conversation and, under each assistant answer, a card that explains the disruption: what happened to each flight, the passenger's benefits, the proposed option at no extra cost and whether an agent will follow up. The card shows only what a passenger may see.
 
-The screen is a pure UI for now (see Risks above): it makes no API call and shows example data shaped like the response of `POST /api/v1/disruptions/{booking_id}/resolve`. The interface text is in English and the theme follows the system's light or dark preference. More details in [`frontend/README.md`](frontend/README.md).
+The chat is connected to the conversational agent (change `connect-chat-to-agent`). It works like this:
+1. **Booking step.** The chat asks for a booking code (try `ABC123`, `DEF456` or `GHI789`) and starts a conversation with `POST /api/v1/conversations`.
+2. **Messages.** Each message goes to `POST /api/v1/conversations/{id}/messages`. The answer shows the agent's `reply` and the trip-update card.
+3. **Confirmation.** When `next_step` is `CONFIRM_OPTION`, the card shows **Confirm this option**. The button sends the structured `confirm_option_id`, which is the only confirmation the guardrails accept. For DEF456 it leads to `REBOOKING_PENDING`; for ABC123 there is no button, because an agent must decide.
+
+**How the browser reaches the backend.** The browser calls `/api` on its own origin, and the Vite dev server forwards those calls to `API_PROXY_TARGET`: `http://localhost:8000` by default, `http://backend:8000` in compose. Because of this, the backend needs no CORS.
+
+**Demo time.** The statement's options expire at 2026-09-15T11:04:35Z, so compose sets `VITE_DEMO_NOW=2026-09-15T11:03:00Z`, and it is sent as `now` with every message. Empty it to use the real clock.
+
+**Without `GOOGLE_API_KEY`.** Each turn is answered by the deterministic path, and the card says "prepared by our standard assistant". Confirming an option still works, through the same guardrails.
+
+The interface text is in English, and the theme follows the system's light or dark preference. More details in [`frontend/README.md`](frontend/README.md).
 
 ## How to run
 

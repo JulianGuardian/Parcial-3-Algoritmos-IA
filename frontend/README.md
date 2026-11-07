@@ -2,7 +2,7 @@
 
 React 19 + TypeScript + Vite. Package manager: pnpm. Node.js 24.22.1 or newer in the 24.x line (see `.nvmrc`).
 
-The page is the chat where a passenger asks about a flight change and reads what happened and what to do next. It is a pure UI for now: it makes no API calls and shows example data (see below).
+The page is the chat where a passenger asks about a flight change and reads what happened and what to do next. It talks to the conversational agent through `src/api/` (`/api/v1/conversations`). The dev server proxies `/api` to `API_PROXY_TARGET` (default `http://localhost:8000`), and `VITE_DEMO_NOW`, if set, pins the evaluation time sent with each message. The example data in `src/modules/chat/fixtures.ts` is used by the tests only.
 
 ## Scripts
 
@@ -41,11 +41,17 @@ More in the root [`README.md`](../README.md).
 
 ## How the page works
 
-The chat page is presentational: it gets `messages`, `isLoading`, `error`, `isSubmitting` and `onSubmit` as props.
+The chat page is presentational. It gets `messages`, `isLoading`, `error`, `isSubmitting`, `onSubmit`, `onConfirm` and an optional `footer` as props; the footer replaces the composer, and the booking step uses it.
 
-`src/App.tsx` seeds it with the example conversation in `src/modules/chat/fixtures.ts` and appends the passenger's message on send. The examples cover every card state (delay with a missed connection, compensation request, cancellation, unverified status and a message without a card). They are temporary: remove them, and this wiring, when the chat is connected to the backend.
+`src/App.tsx` holds the conversation:
+1. **Booking step.** `BookingForm` starts the conversation with `startConversation`.
+2. **Messages.** Each message goes through `sendMessage`, and the answer is mapped to the card by `api/mapper.ts`.
+3. **Confirmation.** It is sent with `confirm_option_id`, and only the latest answer offers it.
+4. **Errors.** A `404 CONVERSATION_NOT_FOUND` returns to the booking step. Any other error shows a banner and keeps the typed text.
 
-Assistant messages can carry a decision card. `src/modules/chat/types.ts` mirrors the response of `POST /api/v1/disruptions/{booking_id}/resolve`, trimmed to what a passenger may see: internal sources, discarded events, rejected options, rule identifiers and the trace are not in the types, so the card cannot show them. Backend codes are translated to plain words in `labels.ts`, and an unknown code is shown as a generic text, never as the code.
+The examples in `src/modules/chat/fixtures.ts` cover every card state and are used by the tests only.
+
+Assistant messages can carry a decision card. `src/modules/chat/types.ts` is the card's view model, filled from the agent response (`src/api/types.ts`) and trimmed to what a passenger may see: internal sources, discarded events, rejected options, rule identifiers and the trace are not in the types, so the card cannot show them. Backend codes are translated to plain words in `labels.ts`, and an unknown code is shown as a generic text, never as the code.
 
 Message text is always displayed as plain text; nothing in it is interpreted as HTML or markup.
 

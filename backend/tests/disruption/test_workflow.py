@@ -168,3 +168,64 @@ def test_trace_is_json_lines_serializable():
     for line in lines.splitlines():
         parsed = json.loads(line)
         assert "request_id" in parsed and "agent" in parsed and "latency_ms" in parsed
+
+
+def _degraded_turn(booking_id, *, confirm=None, writes=None, now="2026-09-15T11:03:00Z"):
+    service, _ = new_session_service(booking_id, now=now)
+    writes = writes or MockWriteTools()
+    outcome = run_turn(
+        session_service=service,
+        app_name="test-app",
+        user_id="u1",
+        session_id="s1",
+        booking_id=booking_id,
+        message="I confirm flight NB2412.",
+        deps=ToolDeps(write_tools=writes),
+        settings=SETTINGS,
+        confirm_option_id=confirm,
+        now=now,
+        model=FakeLlm(script=[], fail_after=0),
+    )
+    return outcome.response, writes
+
+
+def test_degraded_mode_still_honors_a_structured_confirmation():
+    from app.disruption.actions.write_tools import REBOOKING
+
+    response, writes = _degraded_turn("DEF456", confirm="O1")
+
+    assert response.degraded is True
+    assert response.next_step == "REBOOKING_PENDING"
+    assert response.rebooking_status == "PENDING"
+    assert len(writes.calls_to(REBOOKING)) == 1
+
+
+def test_degraded_mode_never_rebooks_without_confirmation():
+    from app.disruption.actions.write_tools import REBOOKING
+
+    response, writes = _degraded_turn("DEF456")
+
+    assert response.next_step == "CONFIRM_OPTION"
+    assert writes.calls_to(REBOOKING) == []
+
+
+def test_degraded_confirmation_is_blocked_when_a_human_is_required():
+    from app.disruption.actions.write_tools import HUMAN_CASE, REBOOKING
+
+    response, writes = _degraded_turn("ABC123", confirm="O1")
+
+    assert writes.calls_to(REBOOKING) == []
+    assert len(writes.calls_to(HUMAN_CASE)) == 1
+    assert response.next_step == "AGENT_WILL_CONTACT"
+
+
+def test_degraded_confirmation_with_two_timeouts_escalates_without_a_false_claim():
+    from app.disruption.actions.write_tools import REBOOKING
+
+    response, writes = _degraded_turn("DEF456", confirm="O1", writes=MockWriteTools(rebooking_statuses=[503, 503]))
+
+    assert len(writes.calls_to(REBOOKING)) == 2
+    assert response.rebooking_status == "INDETERMINATE"
+    assert response.next_step == "AGENT_WILL_CONTACT"
+    assert response.human_case_id == "HC-4471"
+    assert "rebooked" not in response.reply.lower()

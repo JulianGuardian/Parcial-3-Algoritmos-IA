@@ -27,7 +27,13 @@ from app.disruption.agents.contracts import (
     EntitlementOut,
     NextStep,
 )
-from app.disruption.agents.disruption_tools import Evaluation, ToolDeps, evaluate, option_view
+from app.disruption.agents.disruption_tools import (
+    Evaluation,
+    ToolDeps,
+    evaluate,
+    option_view,
+    trip_status_result,
+)
 from app.disruption.agents.validator import validate_answer_draft
 from app.disruption.communication.messages import build_message, describe_what_happened
 from app.disruption.contracts import AssessmentStatus
@@ -65,6 +71,8 @@ def build_response(
         what_happened=describe_what_happened(evaluation.trip)
         if evaluation.trip.assessment_status not in (AssessmentStatus.CONFLICTING, AssessmentStatus.UNVERIFIED)
         else ["The latest status of the trip could not be verified."],
+        segments=trip_status_result(evaluation.trip).segments,
+        human_reasons=_human_reasons(decision.human_reasons, case),
         entitlements=[
             EntitlementOut(rule_id=r.rule_id, entitlement=r.entitlement, policy_ref=decision.policy_ref or "")
             for r in decision.applied_rules
@@ -80,6 +88,14 @@ def build_response(
         degraded=degraded,
         trajectory=[entry["tool"] for entry in state.get(STATE_TOOL_LOG) or []],
     )
+
+
+def _human_reasons(decision_reasons: list[str], case: dict | None) -> list[str]:
+    """The decision's reasons, plus a failed write that only the case records."""
+    reasons = list(decision_reasons)
+    if case and RebookingStatus.INDETERMINATE.value in "".join(case.get("reasons", [])):
+        reasons.append("REBOOKING_INDETERMINATE")
+    return list(dict.fromkeys(reasons))
 
 
 def _next_step(evaluation: Evaluation, human_required: bool, rebooking_status: str | None, has_options: bool) -> NextStep:

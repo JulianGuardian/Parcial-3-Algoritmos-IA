@@ -148,3 +148,31 @@ def test_faithfulness_fails_on_unbacked_entitlement_and_flight():
     assert not result.ok
     assert "unbacked entitlement MEAL_VOUCHER (R2, POL-DELAY-2026-03)" in result.problems
     assert "reply mentions flight NB2450 outside options" in result.problems
+
+
+def test_response_carries_segments_and_human_reasons_for_the_card():
+    response, _, _ = abc123_turn()
+
+    s1, s2 = response.segments
+    assert (s1.segment_id, s1.status, s1.delay_minutes, s1.estimated_departure) == (
+        "S1",
+        "DELAYED",
+        160,
+        "2026-09-15T17:10",
+    )
+    assert s2.missed_connection is True
+    assert response.human_reasons == ["R5_PRIORITY_HANDLING"]
+    for leaked in ("OPS_CORE", "LEGACY_MIRROR", "E-1012"):
+        assert leaked not in response.model_dump_json()
+
+
+def test_indeterminate_rebooking_is_listed_as_a_human_reason():
+    writes = MockWriteTools(rebooking_statuses=[503, 503])
+    deps, tools = toolkit(writes)
+    ctx = FakeToolContext(session("DEF456", confirmed="O1"))
+    tools["request_rebooking"]("O1", ctx)
+    enforce_escalation(ctx.state, deps)
+
+    response = build_response(ctx.state, deps, reply_draft=None)
+
+    assert response.human_reasons == ["REBOOKING_INDETERMINATE"]

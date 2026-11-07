@@ -1,4 +1,8 @@
-// UI subset of the response of POST /api/v1/disruptions/{booking_id}/resolve.
+import type { NextStep } from '../../api/types'
+
+// UI view model of the trip-update card. The connected chat fills it from the agent response
+// (POST /api/v1/conversations/{id}/messages) through `api/mapper.ts`; the sample fixtures follow
+// the same shape.
 //
 // Names and nesting follow the API (snake_case) so a later change can pass the
 // response through with little mapping. Only what the passenger may see is
@@ -26,6 +30,8 @@ export interface AppliedRule {
 }
 
 export interface RecommendedOption {
+  /** Needed to confirm the option; absent in the sample fixtures. */
+  option_id?: string
   flight_number: string | null
   origin: string | null
   destination: string | null
@@ -50,6 +56,10 @@ export interface DisruptionDecision {
   actions: {
     human_case: { case_id: string } | null
   }
+  /** What the passenger should expect next; absent in the sample fixtures. */
+  next_step?: NextStep | null
+  /** True when the standard (non-AI) answer was used because the assistant model was unavailable. */
+  degraded?: boolean
 }
 
 export interface Message {

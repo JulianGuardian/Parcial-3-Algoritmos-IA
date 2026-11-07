@@ -1,6 +1,7 @@
 // Plain-language text for backend codes. Every lookup has a generic fallback
 // so an unknown code can never reach the passenger as a raw identifier.
 
+import type { NextStep } from '../../api/types'
 import type { StatusKind } from '../../utils/theme'
 
 const STATUS_KIND: Record<string, StatusKind> = {
@@ -30,6 +31,15 @@ const HUMAN_REASON_LABEL: Record<string, string> = {
   ASSESSMENT_CONFLICTING: 'We are still confirming the status of your trip',
   ASSESSMENT_UNVERIFIED: 'We are still confirming the status of your trip',
   MISSING_DECISION_DATA: 'Some booking details need to be checked',
+  REBOOKING_INDETERMINATE: 'We could not confirm your change request; an agent will check it',
+}
+
+const NEXT_STEP_TEXT: Record<NextStep, string> = {
+  CONFIRM_OPTION: 'Confirm this option if you want us to request the change.',
+  AGENT_WILL_CONTACT: 'An agent will contact you shortly.',
+  REBOOKING_PENDING: 'We have requested this change. You will receive a confirmation once it is completed.',
+  VERIFYING: 'We are still confirming the latest status of your trip.',
+  NO_ACTION_NEEDED: 'There is nothing you need to do right now.',
 }
 
 export const UNKNOWN_ENTITLEMENT_LABEL = 'Additional benefit: an agent will give you details'
@@ -55,4 +65,8 @@ export function entitlementLabel(code: string): string {
 
 export function humanReasonLabel(code: string): string {
   return HUMAN_REASON_LABEL[code] ?? UNKNOWN_HUMAN_REASON_LABEL
+}
+
+export function nextStepText(step: NextStep): string {
+  return NEXT_STEP_TEXT[step]
 }
