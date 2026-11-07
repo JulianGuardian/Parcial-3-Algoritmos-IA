@@ -15,10 +15,10 @@
 
 ## 3. Agent workflow and structured response
 
-- [ ] 3.1 Build the `SequentialAgent` `disruption_companion` with `intent_classifier` (`output_key="intake"`, reusing the existing classifier definition) and `disruption_agent` (the tools from group 2, `before_tool_callback`, an instruction that treats tool output as data), and verify with a scripted fake model that the classifier runs before the first tool call
+- [x] 3.1 Build the `SequentialAgent` `disruption_companion` with `intent_classifier` (`output_key="intake"`, reusing the existing classifier definition) and `disruption_agent` (the tools from group 2, `before_tool_callback`, an instruction that treats tool output as data), and verify with a scripted fake model that the classifier runs before the first tool call
 - [x] 3.2 Implement the `AgentResponse` model and the response builder (all fields except `reply` come from the tool results of the turn; `reply` goes through `validate_answer_draft` with the template as fallback), and verify tests for the ABC123 fields (R3 and R5 with `POL-DELAY-2026-03`, only O1, `human_required`, `AGENT_WILL_CONTACT`) and for "reply mentioning NB2450 → template"
-- [ ] 3.3 Implement degradation (quota, timeout or error → keyword intake, `resolve_disruption`, template; `degraded: true`), and verify a test with a failing fake model where the response matches the deterministic pipeline
-- [ ] 3.4 Emit the structured JSON-lines trace (agent, tool, arguments, latency, callback decision, request id) and remove the superseded `answer_agent` path, and verify a test that scans a full fake run's trace for personal data
+- [x] 3.3 Implement degradation (quota, timeout or error → keyword intake, `resolve_disruption`, template; `degraded: true`), and verify a test with a failing fake model where the response matches the deterministic pipeline
+- [x] 3.4 Emit the structured JSON-lines trace (agent, tool, arguments, latency, callback decision, request id) and remove the superseded `answer_agent` path, and verify a test that scans a full fake run's trace for personal data
 
 ## 4. Conversation API
 
